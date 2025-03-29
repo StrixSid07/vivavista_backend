@@ -111,20 +111,23 @@ if (isLocal) {
   );
 } else {
   // 🔹 Production Server (HTTPS)
-  const sslOptions = {
-    key: fs.readFileSync(
-      "/etc/letsencrypt/live/vivavistavacations.co.uk/privkey.pem"
-    ),
-    cert: fs.readFileSync(
-      "/etc/letsencrypt/live/vivavistavacations.co.uk/fullchain.pem"
-    ),
-  };
+  // const sslOptions = {
+  //   key: fs.readFileSync(
+  //     "/etc/letsencrypt/live/vivavistavacations.co.uk/privkey.pem"
+  //   ),
+  //   cert: fs.readFileSync(
+  //     "/etc/letsencrypt/live/vivavistavacations.co.uk/fullchain.pem"
+  //   ),
+  // };
 
-  https.createServer(sslOptions, app).listen(PORT, "0.0.0.0", () => {
-    console.log(
-      `🚀 Secure Server running on https://api.vivavistavacations.co.uk:${PORT}`
-    );
-  });
+  // https.createServer(sslOptions, app).listen(PORT, "0.0.0.0", () => {
+  //   console.log(
+  //     `🚀 Secure Server running on https://api.vivavistavacations.co.uk:${PORT}`
+  //   );
+  // });
+  app.listen(PORT, "0.0.0.0", () =>
+    console.log(`🚀 Server running on http://localhost:${PORT}`)
+  );
 }
 
 // ✅ Start Cron Job for Hotel Ratings Update

@@ -27,6 +27,7 @@ const corsOptions = {
     "http://localhost:5173",
     "http://54.172.95.174",
     "https://54.172.95.174",
+    "https://vivavista.netlify.app/",
     "http://vivavistavacations.co.uk",
     "http://www.vivavistavacations.co.uk",
     "https://vivavistavacations.co.uk",

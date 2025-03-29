@@ -7,15 +7,15 @@ const session = require("express-session");
 const connectDB = require("./config/db");
 const rateLimit = require("express-rate-limit");
 const compression = require("compression");
-const redis = require("redis");
+// const redis = require("redis");
 const fs = require("fs");
 const https = require("https");
 const swaggerDocs = require("./config/swagger");
 const path = require("path"); // ✅ Import path module
 
 // Initialize Redis client
-const client = redis.createClient();
-client.connect();
+// const client = redis.createClient();
+// client.connect();
 
 dotenv.config();
 connectDB();

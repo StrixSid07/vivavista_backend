@@ -67,7 +67,12 @@ exports.getLatestBlogs = async (req, res) => {
 /** ✅ Get Homepage Data */
 exports.getHomepageData = async (req, res) => {
   try {
-    const featuredDeals = await Deal.find({ isFeatured: true }).limit(6);
+    const featuredDeals = await Deal.find({ isFeatured: true })
+    .populate({
+      path: "destination",
+      select: "name", // Only fetch name & image from Destination
+    })
+    .limit(6);
     const destinations = await Destination.find()
       .populate({
         path: "deals",

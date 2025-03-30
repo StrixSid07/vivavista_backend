@@ -68,7 +68,12 @@ exports.getLatestBlogs = async (req, res) => {
 exports.getHomepageData = async (req, res) => {
   try {
     const featuredDeals = await Deal.find({ isFeatured: true }).limit(6);
-    const destinations = await Destination.find().limit(6);
+    const destinations = await Destination.find()
+      .populate({
+        path: "deals",
+        model: "Deal",
+      })
+      .limit(6);
     const reviews = await Review.find().limit(6);
     const blogs = await Blog.find().sort({ createdAt: -1 }).limit(3);
 

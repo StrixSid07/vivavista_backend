@@ -1,5 +1,6 @@
 const Deal = require("../models/Deal");
 const Hotel = require("../models/Hotel");
+const Destination = require("../models/Destination");
 const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
 
 // ✅ Create a New Deal with Image Upload
@@ -17,23 +18,31 @@ const createDeal = async (req, res) => {
       boardBasis,
       isTopDeal,
       distanceToCenter,
-      distanceToBeach
+      distanceToBeach,
     } = parsedData; // Now you can access properties directly
-    console.log("this is req body",req.body.data);
-console.log("this is country",availableCountries);
+    console.log("this is req body", req.body.data);
+    console.log("this is country", availableCountries);
     if (!Array.isArray(availableCountries) || availableCountries.length === 0) {
-      return res.status(400).json({ message: "At least one country must be selected." });
+      return res
+        .status(400)
+        .json({ message: "At least one country must be selected." });
     }
     if (!Array.isArray(hotels) || hotels.length === 0) {
-      return res.status(400).json({ message: "At least one hotel must be added." });
+      return res
+        .status(400)
+        .json({ message: "At least one hotel must be added." });
     }
     if (!Array.isArray(prices) || prices.length === 0) {
-      return res.status(400).json({ message: "At least one price entry is required." });
+      return res
+        .status(400)
+        .json({ message: "At least one price entry is required." });
     }
     // Extract image URLs from the request
     let imageUrls = [];
     if (req.files && req.files.length > 0) {
-      imageUrls = req.files.map((file) => (IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`));
+      imageUrls = req.files.map((file) =>
+        IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
+      );
     }
 
     const newDeal = new Deal({
@@ -51,9 +60,21 @@ console.log("this is country",availableCountries);
 
     await newDeal.save();
 
-    res.status(201).json({ message: "Deal created successfully", deal: newDeal });
+    const updatedDestination = await Destination.findByIdAndUpdate(
+      destination,
+      { $push: { deals: newDeal._id } }, // Add new deal ID to the destination
+      { new: true, useFindAndModify: false }
+    );
+
+    if (!updatedDestination) {
+      return res.status(404).json({ message: "Destination not found." });
+    }
+
+    res
+      .status(201)
+      .json({ message: "Deal created successfully", deal: newDeal });
   } catch (error) {
-    console.log("error",error);
+    console.log("error", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -63,7 +84,20 @@ console.log("this is country",availableCountries);
 // ✅ Get All Deals with Search, Filters, and Airport-Specific Flight Details
 const getAllDeals = async (req, res) => {
   try {
-    const { country, airport, minPrice, maxPrice, boardBasis, rating, holidayType, facilities, rooms, guests, sort, search } = req.query;
+    const {
+      country,
+      airport,
+      minPrice,
+      maxPrice,
+      boardBasis,
+      rating,
+      holidayType,
+      facilities,
+      rooms,
+      guests,
+      sort,
+      search,
+    } = req.query;
 
     let query = {};
 
@@ -87,10 +121,12 @@ const getAllDeals = async (req, res) => {
     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
 
     // ✅ Filter by Holiday Type
-    if (holidayType) query["hotels.facilities"] = { $in: holidayType.split(",") };
+    if (holidayType)
+      query["hotels.facilities"] = { $in: holidayType.split(",") };
 
     // ✅ Filter by Facilities
-    if (facilities) query["hotels.facilities"] = { $all: facilities.split(",") };
+    if (facilities)
+      query["hotels.facilities"] = { $all: facilities.split(",") };
 
     // ✅ Search by Hotel Name
     if (search) query["hotels.name"] = { $regex: search, $options: "i" };
@@ -138,7 +174,20 @@ const getAllDeals = async (req, res) => {
 };
 const getAllDealsAdmin = async (req, res) => {
   try {
-    const { country, airport, minPrice, maxPrice, boardBasis, rating, holidayType, facilities, rooms, guests, sort, search } = req.query;
+    const {
+      country,
+      airport,
+      minPrice,
+      maxPrice,
+      boardBasis,
+      rating,
+      holidayType,
+      facilities,
+      rooms,
+      guests,
+      sort,
+      search,
+    } = req.query;
 
     let query = {};
 
@@ -162,10 +211,12 @@ const getAllDealsAdmin = async (req, res) => {
     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
 
     // ✅ Filter by Holiday Type
-    if (holidayType) query["hotels.facilities"] = { $in: holidayType.split(",") };
+    if (holidayType)
+      query["hotels.facilities"] = { $in: holidayType.split(",") };
 
     // ✅ Filter by Facilities
-    if (facilities) query["hotels.facilities"] = { $all: facilities.split(",") };
+    if (facilities)
+      query["hotels.facilities"] = { $all: facilities.split(",") };
 
     // ✅ Search by Hotel Name
     if (search) query["hotels.name"] = { $regex: search, $options: "i" };
@@ -194,7 +245,9 @@ const getAllDealsAdmin = async (req, res) => {
       ? deals
       : deals
           .map((deal) => {
-            const relevantPrices = deal.prices.filter((p) => p.airport === airport);
+            const relevantPrices = deal.prices.filter(
+              (p) => p.airport === airport
+            );
 
             return relevantPrices.length > 0
               ? {
@@ -226,13 +279,17 @@ const getDealById = async (req, res) => {
     if (!req.user || req.user.role !== "admin") {
       const userCountry = req.session.country || "UK";
       if (!deal.availableCountries.includes(userCountry)) {
-        return res.status(403).json({ message: "This deal is not available in your selected country." });
+        return res.status(403).json({
+          message: "This deal is not available in your selected country.",
+        });
       }
 
       // Filter price for the selected country
       const countryPrice = deal.prices.find((p) => p.country === userCountry);
       if (!countryPrice) {
-        return res.status(404).json({ message: "Pricing not available for your selected country." });
+        return res.status(404).json({
+          message: "Pricing not available for your selected country.",
+        });
       }
 
       return res.json({
@@ -254,10 +311,18 @@ const updateDeal = async (req, res) => {
     const deal = await Deal.findById(req.params.id);
     if (!deal) return res.status(404).json({ message: "Deal not found" });
 
-    if (req.body.availableCountries && (!Array.isArray(req.body.availableCountries) || req.body.availableCountries.length === 0)) {
-      return res.status(400).json({ message: "At least one country must be selected." });
+    if (
+      req.body.availableCountries &&
+      (!Array.isArray(req.body.availableCountries) ||
+        req.body.availableCountries.length === 0)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "At least one country must be selected." });
     }
-    const updatedDeal = await Deal.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedDeal = await Deal.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     res.json({ message: "Deal updated successfully", deal: updatedDeal });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });
@@ -278,15 +343,17 @@ const deleteDeal = async (req, res) => {
 };
 const getDealsByDestination = async (req, res) => {
   try {
-      const { destinationId } = req.params;
+    const { destinationId } = req.params;
 
-      const deals = await Deal.find({ destination: destinationId })
-          .populate('destination')
-          .populate('hotels');
+    const deals = await Deal.find({ destination: destinationId })
+      .populate("destination")
+      .populate("hotels");
 
-      res.json(deals);
+    res.json(deals);
   } catch (error) {
-      res.status(500).json({ message: "Error fetching deals by destination", error });
+    res
+      .status(500)
+      .json({ message: "Error fetching deals by destination", error });
   }
 };
 
@@ -335,4 +402,13 @@ const searchDeals = async (req, res) => {
   }
 };
 
-module.exports = { createDeal, getAllDeals, getDealById, updateDeal, deleteDeal, getAllDealsAdmin,getDealsByDestination, searchDeals };
+module.exports = {
+  createDeal,
+  getAllDeals,
+  getDealById,
+  updateDeal,
+  deleteDeal,
+  getAllDealsAdmin,
+  getDealsByDestination,
+  searchDeals,
+};

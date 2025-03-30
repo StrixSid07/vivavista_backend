@@ -82,12 +82,104 @@ const createDeal = async (req, res) => {
 // ✅ Get All Deals (Restricted to User's Selected Country)
 
 // ✅ Get All Deals with Search, Filters, and Airport-Specific Flight Details
+// const getAllDeals = async (req, res) => {
+//   try {
+//     const {
+//       country,
+//       airport,
+//       minPrice,
+//       maxPrice,
+//       boardBasis,
+//       rating,
+//       holidayType,
+//       facilities,
+//       rooms,
+//       guests,
+//       sort,
+//       search,
+//     } = req.query;
+
+//     let query = {};
+
+//     // ✅ Filter by Country
+//     if (country) query.availableCountries = country;
+
+//     // ✅ Filter by Airport
+//     if (airport) query["prices.airport"] = airport;
+
+//     // ✅ Filter by Price Range
+//     if (minPrice || maxPrice) {
+//       query["prices.price"] = {};
+//       if (minPrice) query["prices.price"].$gte = Number(minPrice);
+//       if (maxPrice) query["prices.price"].$lte = Number(maxPrice);
+//     }
+
+//     // ✅ Filter by Board Basis
+//     if (boardBasis) query.boardBasis = boardBasis;
+
+//     // ✅ Filter by Rating
+//     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
+
+//     // ✅ Filter by Holiday Type
+//     if (holidayType)
+//       query["hotels.facilities"] = { $in: holidayType.split(",") };
+
+//     // ✅ Filter by Facilities
+//     if (facilities)
+//       query["hotels.facilities"] = { $all: facilities.split(",") };
+
+//     // ✅ Search by Hotel Name
+//     if (search) query["hotels.name"] = { $regex: search, $options: "i" };
+
+//     // ✅ Filter by Rooms & Guests
+//     if (rooms) query.rooms = Number(rooms);
+//     if (guests) query.guests = Number(guests);
+
+//     // ✅ Apply Sorting
+//     let sortOption = {};
+//     if (sort === "lowest-price") sortOption["prices.price"] = 1;
+//     if (sort === "highest-price") sortOption["prices.price"] = -1;
+//     if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
+
+//     // ✅ Fetch Deals with Filters & Sorting
+//     let deals = await Deal.find(query)
+//       .populate("destination")
+//       .populate("hotels", "name tripAdvisorRating facilities location")
+//       .select("title prices boardBasis distanceToCenter distanceToBeach")
+//       .sort(sortOption)
+//       .limit(50) // Limit to 50 results for performance
+//       .lean();
+
+//     console.log("🚀 ~ getAllDeals ~ deals:", deals);
+//     // ✅ Filter flight details based on the selected airport
+//     deals = deals
+//       .map((deal) => {
+//         console.log("--------", req.user.role);
+//         const relevantPrices = deal.prices.filter((p) => p.airport === airport);
+
+//         return relevantPrices.length > 0
+//           ? {
+//               ...deal,
+//               prices: relevantPrices, // Only return prices for the selected airport
+//             }
+//           : null;
+//       })
+//       .filter(Boolean);
+
+//     console.log("🚀 ~ getAllDeals ~ deals:", deals);
+//     res.json(deals);
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+// ✅ Get All Deals with Search, Filters, and Airport-Specific Flight Details
 const getAllDeals = async (req, res) => {
   try {
     const {
       country,
       airport,
       minPrice,
+      destination,
       maxPrice,
       boardBasis,
       rating,
@@ -102,13 +194,13 @@ const getAllDeals = async (req, res) => {
     let query = {};
 
     // ✅ Filter by Country
-    if (country) query.availableCountries = country;
+    if (country) query.availableCountries = { $in: [country] };
 
     // ✅ Filter by Airport
-    if (airport) query["prices.airport"] = airport;
-
-    // ✅ Filter by Price Range
+    if (airport) query["prices"] = { $elemMatch: { airport } };
+    if (destination) query.destination = destination;
     if (minPrice || maxPrice) {
+      // ✅ Filter by Price Range
       query["prices.price"] = {};
       if (minPrice) query["prices.price"].$gte = Number(minPrice);
       if (maxPrice) query["prices.price"].$lte = Number(maxPrice);
@@ -137,8 +229,8 @@ const getAllDeals = async (req, res) => {
 
     // ✅ Apply Sorting
     let sortOption = {};
-    if (sort === "lowest-price") sortOption["prices.price"] = 1;
-    if (sort === "highest-price") sortOption["prices.price"] = -1;
+    if (sort === "lowest-price") sortOption["prices.0.price"] = 1;
+    if (sort === "highest-price") sortOption["prices.0.price"] = -1;
     if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
 
     // ✅ Fetch Deals with Filters & Sorting
@@ -152,19 +244,19 @@ const getAllDeals = async (req, res) => {
 
     console.log("🚀 ~ getAllDeals ~ deals:", deals);
     // ✅ Filter flight details based on the selected airport
-    deals = deals
-      .map((deal) => {
-        console.log("--------", req.user.role);
-        const relevantPrices = deal.prices.filter((p) => p.airport === airport);
+    // deals = deals
+    //   .map((deal) => {
+    //     console.log("--------", req.user.role);
+    //     const relevantPrices = deal.prices.filter((p) => p.airport === airport);
 
-        return relevantPrices.length > 0
-          ? {
-              ...deal,
-              prices: relevantPrices, // Only return prices for the selected airport
-            }
-          : null;
-      })
-      .filter(Boolean);
+    //     return relevantPrices.length > 0
+    //       ? {
+    //           ...deal,
+    //           prices: relevantPrices, // Only return prices for the selected airport
+    //         }
+    //       : null;
+    //   })
+    //   .filter(Boolean);
 
     console.log("🚀 ~ getAllDeals ~ deals:", deals);
     res.json(deals);
@@ -172,6 +264,7 @@ const getAllDeals = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 const getAllDealsAdmin = async (req, res) => {
   try {
     const {

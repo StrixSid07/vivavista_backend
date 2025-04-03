@@ -4,6 +4,81 @@ const Destination = require("../models/Destination");
 const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
 
 // ✅ Create a New Deal with Image Upload
+// const createDeal = async (req, res) => {
+//   try {
+//     const parsedData = JSON.parse(req.body.data);
+
+//     const {
+//       title,
+//       description,
+//       availableCountries,
+//       destination,
+//       prices,
+//       hotels,
+//       boardBasis,
+//       isTopDeal,
+//       distanceToCenter,
+//       distanceToBeach,
+//     } = parsedData; // Now you can access properties directly
+//     console.log("this is req body", req.body.data);
+//     console.log("this is country", availableCountries);
+//     if (!Array.isArray(availableCountries) || availableCountries.length === 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "At least one country must be selected." });
+//     }
+//     if (!Array.isArray(hotels) || hotels.length === 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "At least one hotel must be added." });
+//     }
+//     if (!Array.isArray(prices) || prices.length === 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "At least one price entry is required." });
+//     }
+//     // Extract image URLs from the request
+//     let imageUrls = [];
+//     if (req.files && req.files.length > 0) {
+//       imageUrls = req.files.map((file) =>
+//         IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
+//       );
+//     }
+
+//     const newDeal = new Deal({
+//       title,
+//       description,
+//       images: imageUrls,
+//       availableCountries,
+//       prices,
+//       boardBasis,
+//       isTopDeal,
+//       destination,
+//       distanceToCenter,
+//       distanceToBeach,
+//     });
+
+//     await newDeal.save();
+
+//     const updatedDestination = await Destination.findByIdAndUpdate(
+//       destination,
+//       { $push: { deals: newDeal._id } }, // Add new deal ID to the destination
+//       { new: true, useFindAndModify: false }
+//     );
+
+//     if (!updatedDestination) {
+//       return res.status(404).json({ message: "Destination not found." });
+//     }
+
+//     res
+//       .status(201)
+//       .json({ message: "Deal created successfully", deal: newDeal });
+//   } catch (error) {
+//     console.log("error", error);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
 const createDeal = async (req, res) => {
   try {
     const parsedData = JSON.parse(req.body.data);
@@ -15,10 +90,14 @@ const createDeal = async (req, res) => {
       destination,
       prices,
       hotels,
+      itinerary,
       boardBasis,
       isTopDeal,
       distanceToCenter,
       distanceToBeach,
+      Days,
+      rooms,
+      guests,
     } = parsedData; // Now you can access properties directly
     console.log("this is req body", req.body.data);
     console.log("this is country", availableCountries);
@@ -54,21 +133,16 @@ const createDeal = async (req, res) => {
       boardBasis,
       isTopDeal,
       destination,
+      hotels,
+      rooms,
+      itinerary,
+      guests,
+      Days,
       distanceToCenter,
       distanceToBeach,
     });
 
     await newDeal.save();
-
-    const updatedDestination = await Destination.findByIdAndUpdate(
-      destination,
-      { $push: { deals: newDeal._id } }, // Add new deal ID to the destination
-      { new: true, useFindAndModify: false }
-    );
-
-    if (!updatedDestination) {
-      return res.status(404).json({ message: "Destination not found." });
-    }
 
     res
       .status(201)
@@ -80,104 +154,13 @@ const createDeal = async (req, res) => {
 };
 
 // ✅ Get All Deals (Restricted to User's Selected Country)
-
-// ✅ Get All Deals with Search, Filters, and Airport-Specific Flight Details
-// const getAllDeals = async (req, res) => {
-//   try {
-//     const {
-//       country,
-//       airport,
-//       minPrice,
-//       maxPrice,
-//       boardBasis,
-//       rating,
-//       holidayType,
-//       facilities,
-//       rooms,
-//       guests,
-//       sort,
-//       search,
-//     } = req.query;
-
-//     let query = {};
-
-//     // ✅ Filter by Country
-//     if (country) query.availableCountries = country;
-
-//     // ✅ Filter by Airport
-//     if (airport) query["prices.airport"] = airport;
-
-//     // ✅ Filter by Price Range
-//     if (minPrice || maxPrice) {
-//       query["prices.price"] = {};
-//       if (minPrice) query["prices.price"].$gte = Number(minPrice);
-//       if (maxPrice) query["prices.price"].$lte = Number(maxPrice);
-//     }
-
-//     // ✅ Filter by Board Basis
-//     if (boardBasis) query.boardBasis = boardBasis;
-
-//     // ✅ Filter by Rating
-//     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
-
-//     // ✅ Filter by Holiday Type
-//     if (holidayType)
-//       query["hotels.facilities"] = { $in: holidayType.split(",") };
-
-//     // ✅ Filter by Facilities
-//     if (facilities)
-//       query["hotels.facilities"] = { $all: facilities.split(",") };
-
-//     // ✅ Search by Hotel Name
-//     if (search) query["hotels.name"] = { $regex: search, $options: "i" };
-
-//     // ✅ Filter by Rooms & Guests
-//     if (rooms) query.rooms = Number(rooms);
-//     if (guests) query.guests = Number(guests);
-
-//     // ✅ Apply Sorting
-//     let sortOption = {};
-//     if (sort === "lowest-price") sortOption["prices.price"] = 1;
-//     if (sort === "highest-price") sortOption["prices.price"] = -1;
-//     if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
-
-//     // ✅ Fetch Deals with Filters & Sorting
-//     let deals = await Deal.find(query)
-//       .populate("destination")
-//       .populate("hotels", "name tripAdvisorRating facilities location")
-//       .select("title prices boardBasis distanceToCenter distanceToBeach")
-//       .sort(sortOption)
-//       .limit(50) // Limit to 50 results for performance
-//       .lean();
-
-//     console.log("🚀 ~ getAllDeals ~ deals:", deals);
-//     // ✅ Filter flight details based on the selected airport
-//     deals = deals
-//       .map((deal) => {
-//         console.log("--------", req.user.role);
-//         const relevantPrices = deal.prices.filter((p) => p.airport === airport);
-
-//         return relevantPrices.length > 0
-//           ? {
-//               ...deal,
-//               prices: relevantPrices, // Only return prices for the selected airport
-//             }
-//           : null;
-//       })
-//       .filter(Boolean);
-
-//     console.log("🚀 ~ getAllDeals ~ deals:", deals);
-//     res.json(deals);
-//   } catch (error) {
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
-// ✅ Get All Deals with Search, Filters, and Airport-Specific Flight Details
 const getAllDeals = async (req, res) => {
   try {
     const {
       country,
       airport,
+      fromdate,
+      todate,
       minPrice,
       destination,
       maxPrice,
@@ -194,13 +177,20 @@ const getAllDeals = async (req, res) => {
     let query = {};
 
     // ✅ Filter by Country
-    if (country) query.availableCountries = { $in: [country] };
-
+    if (country) query.availableCountries = country;
+    if (destination) query["destination"] = destination;
     // ✅ Filter by Airport
-    if (airport) query["prices"] = { $elemMatch: { airport } };
-    if (destination) query.destination = destination;
+    if (airport) query["prices.airport"] = airport;
+    // ✅ Filter by Date Range
+    if (fromdate && todate) {
+      query["prices"] = {
+        $elemMatch: {
+          startdate: { $gte: new Date(fromdate), $lte: new Date(todate) },
+        },
+      };
+    }
+    // ✅ Filter by Price Range
     if (minPrice || maxPrice) {
-      // ✅ Filter by Price Range
       query["prices.price"] = {};
       if (minPrice) query["prices.price"].$gte = Number(minPrice);
       if (maxPrice) query["prices.price"].$lte = Number(maxPrice);
@@ -229,38 +219,42 @@ const getAllDeals = async (req, res) => {
 
     // ✅ Apply Sorting
     let sortOption = {};
-    if (sort === "lowest-price") sortOption["prices.0.price"] = 1;
-    if (sort === "highest-price") sortOption["prices.0.price"] = -1;
+    if (sort === "lowest-price") sortOption["prices.price"] = 1;
+    if (sort === "highest-price") sortOption["prices.price"] = -1;
     if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
 
     // ✅ Fetch Deals with Filters & Sorting
     let deals = await Deal.find(query)
       .populate("destination")
-      .populate("hotels", "name tripAdvisorRating facilities location")
-      .select("title prices boardBasis distanceToCenter distanceToBeach")
+      .populate("hotels", "name tripAdvisorRating facilities location images")
+      .select(
+        "title prices boardBasis distanceToCenter distanceToBeach days images"
+      )
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance
       .lean();
 
     console.log("🚀 ~ getAllDeals ~ deals:", deals);
     // ✅ Filter flight details based on the selected airport
-    // deals = deals
-    //   .map((deal) => {
-    //     console.log("--------", req.user.role);
-    //     const relevantPrices = deal.prices.filter((p) => p.airport === airport);
+    deals = deals
+      .map((deal) => {
+        const relevantPrices = deal.prices.filter((p) => {
+          const matchAirport = !airport || p.airport === airport;
+          // const matchDate = (!fromdate || new Date(p.date) >= new Date(fromdate)) &&
+          //                   (!enddate || new Date(p.date) <= new Date(enddate));
+          return matchAirport;
+        });
 
-    //     return relevantPrices.length > 0
-    //       ? {
-    //           ...deal,
-    //           prices: relevantPrices, // Only return prices for the selected airport
-    //         }
-    //       : null;
-    //   })
-    //   .filter(Boolean);
+        return relevantPrices.length > 0
+          ? { ...deal, prices: relevantPrices }
+          : null;
+      })
+      .filter(Boolean);
 
     console.log("🚀 ~ getAllDeals ~ deals:", deals);
     res.json(deals);
   } catch (error) {
+    console.log("error", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

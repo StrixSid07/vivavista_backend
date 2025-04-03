@@ -7,15 +7,15 @@ const session = require("express-session");
 const connectDB = require("./config/db");
 const rateLimit = require("express-rate-limit");
 const compression = require("compression");
-// const redis = require("redis");
+const redis = require("redis");
 const fs = require("fs");
 const https = require("https");
 const swaggerDocs = require("./config/swagger");
 const path = require("path"); // ✅ Import path module
 
 // Initialize Redis client
-// const client = redis.createClient();
-// client.connect();
+const client = redis.createClient();
+client.connect();
 
 dotenv.config();
 connectDB();
@@ -50,7 +50,7 @@ app.use(compression());
 // ✅ Apply Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 500, // Limit each IP to 100 requests per windowMs
   message: "Too many requests, please try again later.",
 });
 
@@ -84,6 +84,8 @@ app.use("/api/misc", require("./routes/miscRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
 app.use("/api/home", require("./routes/homeRoutes"));
 app.use("/api", require("./routes/destinationRoutes"));
+app.use("/api/airport", require("./routes/airportRoutes"));
+app.use("/api/trending", require("./routes/trandingRoutes"));
 
 // ✅ Apply Caching to Deals API
 const cacheMiddleware = async (req, res, next) => {
@@ -133,4 +135,4 @@ if (isLocal) {
 
 // ✅ Start Cron Job for Hotel Ratings Update
 const updateHotelRatings = require("./cron/hotelUpdater");
-updateHotelRatings(); // Run once on startup
+updateHotelRatings();

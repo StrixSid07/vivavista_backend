@@ -7,6 +7,12 @@ const HotelSchema = new mongoose.Schema(
     facilities: [{ type: String }], // List of facilities
     location: { type: String, required: true },
     locationId: { type: String, required: true, unique: true }, // TripAdvisor location ID
+    rooms: [
+      {
+        numberofrooms: { type: Number, required: true }, // E.g., "Single", "Double", "Suite"
+        guestCapacity: { type: Number, required: true }, // Max guests allowed
+      },
+    ],
     tripAdvisorRating: { type: Number }, // Auto-fetched from TripAdvisor
     tripAdvisorReviews: { type: Number }, // Number of reviews
     tripAdvisorPhotos: [{ type: String }], // Store up to 5 photo URLs

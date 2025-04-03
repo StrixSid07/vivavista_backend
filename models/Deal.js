@@ -11,7 +11,15 @@ const DealSchema = new mongoose.Schema(
       ref: "Destination",
       required: false,
     },
-
+    days: {
+      type: Number,
+      require: true,
+    },
+    rooms: { type: Number, require: true },
+    guests: {
+      type: Number,
+      require: true,
+    },
     // Airport-based pricing & flight details
     prices: [
       {
@@ -22,7 +30,8 @@ const DealSchema = new mongoose.Schema(
           ref: "Hotel",
           required: true,
         },
-        date: { type: Date, required: true },
+        startdate: { type: Date, required: true },
+        enddate: { type: Date, required: true },
         price: { type: Number, required: true },
         flightDetails: {
           outbound: {
@@ -50,6 +59,8 @@ const DealSchema = new mongoose.Schema(
       required: true,
     },
     isTopDeal: { type: Boolean, default: false },
+    isHotdeal: { type: Boolean, default: false },
+    iternatiy: [{ type: String }],
     isFeatured: { type: Boolean, default: false },
     distanceToCenter: { type: String }, // Example: "500m away"
     distanceToBeach: { type: String }, // Example: "300m away"

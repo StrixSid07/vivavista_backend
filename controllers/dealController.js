@@ -79,6 +79,80 @@ const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
 //   }
 // };
 
+// const createDeal = async (req, res) => {
+//   try {
+//     const parsedData = JSON.parse(req.body.data);
+
+//     const {
+//       title,
+//       description,
+//       availableCountries,
+//       destination,
+//       prices,
+//       hotels,
+//       itinerary,
+//       boardBasis,
+//       isTopDeal,
+//       distanceToCenter,
+//       distanceToBeach,
+//       Days,
+//       rooms,
+//       guests,
+//     } = parsedData; // Now you can access properties directly
+//     console.log("this is req body", req.body.data);
+//     console.log("this is country", availableCountries);
+//     if (!Array.isArray(availableCountries) || availableCountries.length === 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "At least one country must be selected." });
+//     }
+//     if (!Array.isArray(hotels) || hotels.length === 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "At least one hotel must be added." });
+//     }
+//     if (!Array.isArray(prices) || prices.length === 0) {
+//       return res
+//         .status(400)
+//         .json({ message: "At least one price entry is required." });
+//     }
+//     // Extract image URLs from the request
+//     let imageUrls = [];
+//     if (req.files && req.files.length > 0) {
+//       imageUrls = req.files.map((file) =>
+//         IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
+//       );
+//     }
+
+//     const newDeal = new Deal({
+//       title,
+//       description,
+//       images: imageUrls,
+//       availableCountries,
+//       prices,
+//       boardBasis,
+//       isTopDeal,
+//       destination,
+//       hotels,
+//       rooms,
+//       itinerary,
+//       guests,
+//       Days,
+//       distanceToCenter,
+//       distanceToBeach,
+//     });
+
+//     await newDeal.save();
+
+//     res
+//       .status(201)
+//       .json({ message: "Deal created successfully", deal: newDeal });
+//   } catch (error) {
+//     console.log("error", error);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
 const createDeal = async (req, res) => {
   try {
     const parsedData = JSON.parse(req.body.data);
@@ -90,17 +164,25 @@ const createDeal = async (req, res) => {
       destination,
       prices,
       hotels,
-      itinerary,
+      itinerary, // Corrected from iternatiy
       boardBasis,
       isTopDeal,
       distanceToCenter,
       distanceToBeach,
-      Days,
+      days, // Corrected from Days
       rooms,
       guests,
-    } = parsedData; // Now you can access properties directly
+    } = parsedData;
+
     console.log("this is req body", req.body.data);
     console.log("this is country", availableCountries);
+
+    // Validation
+    if (!title || !description) {
+      return res
+        .status(400)
+        .json({ message: "Title and description are required." });
+    }
     if (!Array.isArray(availableCountries) || availableCountries.length === 0) {
       return res
         .status(400)
@@ -116,6 +198,12 @@ const createDeal = async (req, res) => {
         .status(400)
         .json({ message: "At least one price entry is required." });
     }
+    if (!days || !rooms || !guests) {
+      return res
+        .status(400)
+        .json({ message: "Days, rooms, and guests are required." });
+    }
+
     // Extract image URLs from the request
     let imageUrls = [];
     if (req.files && req.files.length > 0) {
@@ -135,14 +223,25 @@ const createDeal = async (req, res) => {
       destination,
       hotels,
       rooms,
-      itinerary,
+      itinerary, // Corrected from iternatiy
       guests,
-      Days,
+      days, // Corrected from Days
       distanceToCenter,
       distanceToBeach,
     });
 
     await newDeal.save();
+
+    // Update the destination with the new deal ID
+    const updatedDestination = await Destination.findByIdAndUpdate(
+      destination,
+      { $push: { deals: newDeal._id } }, // Add new deal ID to the destination
+      { new: true, useFindAndModify: false }
+    );
+
+    if (!updatedDestination) {
+      return res.status(404).json({ message: "Destination not found." });
+    }
 
     res
       .status(201)

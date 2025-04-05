@@ -83,7 +83,7 @@ app.use("/api/bookings", require("./routes/bookingRoutes"));
 app.use("/api/misc", require("./routes/miscRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
 app.use("/api/home", require("./routes/homeRoutes"));
-app.use("/api", require("./routes/destinationRoutes"));
+app.use("/api/destinations", require("./routes/destinationRoutes"));
 app.use("/api/airport", require("./routes/airportRoutes"));
 app.use("/api/trending", require("./routes/trandingRoutes"));
 

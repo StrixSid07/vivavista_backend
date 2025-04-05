@@ -7,15 +7,15 @@ const session = require("express-session");
 const connectDB = require("./config/db");
 const rateLimit = require("express-rate-limit");
 const compression = require("compression");
-const redis = require("redis");
+// const redis = require("redis");
 const fs = require("fs");
 const https = require("https");
 const swaggerDocs = require("./config/swagger");
 const path = require("path"); // ✅ Import path module
 
 // Initialize Redis client
-const client = redis.createClient();
-client.connect();
+// const client = redis.createClient();
+// client.connect();
 
 dotenv.config();
 connectDB();
@@ -88,15 +88,15 @@ app.use("/api/airport", require("./routes/airportRoutes"));
 app.use("/api/trending", require("./routes/trandingRoutes"));
 
 // ✅ Apply Caching to Deals API
-const cacheMiddleware = async (req, res, next) => {
-  const key = req.originalUrl;
-  const cachedData = await client.get(key);
-  if (cachedData) {
-    return res.json(JSON.parse(cachedData)); // Return cached response
-  }
-  next();
-};
-app.use("/api/deals", cacheMiddleware);
+// const cacheMiddleware = async (req, res, next) => {
+//   const key = req.originalUrl;
+//   const cachedData = await client.get(key);
+//   if (cachedData) {
+//     return res.json(JSON.parse(cachedData)); // Return cached response
+//   }
+//   next();
+// };
+// app.use("/api/deals", cacheMiddleware);
 
 // ✅ Initialize Swagger Docs
 swaggerDocs(app);

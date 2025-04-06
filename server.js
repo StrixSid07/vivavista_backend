@@ -87,6 +87,7 @@ app.use("/api/home", require("./routes/homeRoutes"));
 app.use("/api/destinations", require("./routes/destinationRoutes"));
 app.use("/api/airport", require("./routes/airportRoutes"));
 app.use("/api/trending", require("./routes/trandingRoutes"));
+app.use("/api/faqs", require("./routes/faqsRoutes"));
 
 // ✅ Apply Caching to Deals API
 // const cacheMiddleware = async (req, res, next) => {

@@ -65,7 +65,7 @@ router.get("/", getAllDeals);
  *       200:
  *         description: Successfully retrieved deals
  */
-router.get("/admin", protect, isAdmin, getAllDealsAdmin);
+router.get("/admin", getAllDealsAdmin);
 
 /**
  * @swagger
@@ -164,7 +164,7 @@ router.post("/", upload.array("images", 5), createDeal);
  *       403:
  *         description: Admin access required
  */
-router.put("/:id", protect, isAdmin, upload.array("images", 5), updateDeal);
+router.put("/:id", upload.array("images", 5), updateDeal);
 
 /**
  * @swagger
@@ -187,7 +187,7 @@ router.put("/:id", protect, isAdmin, upload.array("images", 5), updateDeal);
  *       403:
  *         description: Admin access required
  */
-router.delete("/:id", protect, isAdmin, deleteDeal);
+router.delete("/:id", deleteDeal);
 
 router.get("/destination/:destinationId", getDealsByDestination);
 

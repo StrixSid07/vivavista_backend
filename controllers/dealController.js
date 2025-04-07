@@ -4,155 +4,6 @@ const Destination = require("../models/Destination");
 const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
 
 // ✅ Create a New Deal with Image Upload
-// const createDeal = async (req, res) => {
-//   try {
-//     const parsedData = JSON.parse(req.body.data);
-
-//     const {
-//       title,
-//       description,
-//       availableCountries,
-//       destination,
-//       prices,
-//       hotels,
-//       boardBasis,
-//       isTopDeal,
-//       distanceToCenter,
-//       distanceToBeach,
-//     } = parsedData; // Now you can access properties directly
-//     console.log("this is req body", req.body.data);
-//     console.log("this is country", availableCountries);
-//     if (!Array.isArray(availableCountries) || availableCountries.length === 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "At least one country must be selected." });
-//     }
-//     if (!Array.isArray(hotels) || hotels.length === 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "At least one hotel must be added." });
-//     }
-//     if (!Array.isArray(prices) || prices.length === 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "At least one price entry is required." });
-//     }
-//     // Extract image URLs from the request
-//     let imageUrls = [];
-//     if (req.files && req.files.length > 0) {
-//       imageUrls = req.files.map((file) =>
-//         IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
-//       );
-//     }
-
-//     const newDeal = new Deal({
-//       title,
-//       description,
-//       images: imageUrls,
-//       availableCountries,
-//       prices,
-//       boardBasis,
-//       isTopDeal,
-//       destination,
-//       distanceToCenter,
-//       distanceToBeach,
-//     });
-
-//     await newDeal.save();
-
-//     const updatedDestination = await Destination.findByIdAndUpdate(
-//       destination,
-//       { $push: { deals: newDeal._id } }, // Add new deal ID to the destination
-//       { new: true, useFindAndModify: false }
-//     );
-
-//     if (!updatedDestination) {
-//       return res.status(404).json({ message: "Destination not found." });
-//     }
-
-//     res
-//       .status(201)
-//       .json({ message: "Deal created successfully", deal: newDeal });
-//   } catch (error) {
-//     console.log("error", error);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
-
-// const createDeal = async (req, res) => {
-//   try {
-//     const parsedData = JSON.parse(req.body.data);
-
-//     const {
-//       title,
-//       description,
-//       availableCountries,
-//       destination,
-//       prices,
-//       hotels,
-//       itinerary,
-//       boardBasis,
-//       isTopDeal,
-//       distanceToCenter,
-//       distanceToBeach,
-//       Days,
-//       rooms,
-//       guests,
-//     } = parsedData; // Now you can access properties directly
-//     console.log("this is req body", req.body.data);
-//     console.log("this is country", availableCountries);
-//     if (!Array.isArray(availableCountries) || availableCountries.length === 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "At least one country must be selected." });
-//     }
-//     if (!Array.isArray(hotels) || hotels.length === 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "At least one hotel must be added." });
-//     }
-//     if (!Array.isArray(prices) || prices.length === 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "At least one price entry is required." });
-//     }
-//     // Extract image URLs from the request
-//     let imageUrls = [];
-//     if (req.files && req.files.length > 0) {
-//       imageUrls = req.files.map((file) =>
-//         IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
-//       );
-//     }
-
-//     const newDeal = new Deal({
-//       title,
-//       description,
-//       images: imageUrls,
-//       availableCountries,
-//       prices,
-//       boardBasis,
-//       isTopDeal,
-//       destination,
-//       hotels,
-//       rooms,
-//       itinerary,
-//       guests,
-//       Days,
-//       distanceToCenter,
-//       distanceToBeach,
-//     });
-
-//     await newDeal.save();
-
-//     res
-//       .status(201)
-//       .json({ message: "Deal created successfully", deal: newDeal });
-//   } catch (error) {
-//     console.log("error", error);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
-
 const createDeal = async (req, res) => {
   try {
     const parsedData = JSON.parse(req.body.data);
@@ -164,20 +15,17 @@ const createDeal = async (req, res) => {
       destination,
       prices,
       hotels,
-      itinerary, // Corrected from iternatiy
+      iternatiy,
       boardBasis,
       isTopDeal,
       distanceToCenter,
       distanceToBeach,
-      days, // Corrected from Days
+      Days,
       rooms,
       guests,
-    } = parsedData;
-
+    } = parsedData; // Now you can access properties directly
     console.log("this is req body", req.body.data);
     console.log("this is country", availableCountries);
-
-    // Validation
     if (!title || !description) {
       return res
         .status(400)
@@ -198,12 +46,6 @@ const createDeal = async (req, res) => {
         .status(400)
         .json({ message: "At least one price entry is required." });
     }
-    if (!days || !rooms || !guests) {
-      return res
-        .status(400)
-        .json({ message: "Days, rooms, and guests are required." });
-    }
-
     // Extract image URLs from the request
     let imageUrls = [];
     if (req.files && req.files.length > 0) {
@@ -223,25 +65,14 @@ const createDeal = async (req, res) => {
       destination,
       hotels,
       rooms,
-      itinerary, // Corrected from iternatiy
+      iternatiy,
       guests,
-      days, // Corrected from Days
+      Days,
       distanceToCenter,
       distanceToBeach,
     });
 
     await newDeal.save();
-
-    // Update the destination with the new deal ID
-    const updatedDestination = await Destination.findByIdAndUpdate(
-      destination,
-      { $push: { deals: newDeal._id } }, // Add new deal ID to the destination
-      { new: true, useFindAndModify: false }
-    );
-
-    if (!updatedDestination) {
-      return res.status(404).json({ message: "Destination not found." });
-    }
 
     res
       .status(201)
@@ -358,6 +189,7 @@ const getAllDeals = async (req, res) => {
   }
 };
 
+// ✅ Get All Deals for Admin
 const getAllDealsAdmin = async (req, res) => {
   try {
     const {
@@ -397,15 +229,19 @@ const getAllDealsAdmin = async (req, res) => {
     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
 
     // ✅ Filter by Holiday Type
-    if (holidayType)
+    if (holidayType) {
       query["hotels.facilities"] = { $in: holidayType.split(",") };
+    }
 
     // ✅ Filter by Facilities
-    if (facilities)
+    if (facilities) {
       query["hotels.facilities"] = { $all: facilities.split(",") };
+    }
 
     // ✅ Search by Hotel Name
-    if (search) query["hotels.name"] = { $regex: search, $options: "i" };
+    if (search) {
+      query["hotels.name"] = { $regex: search, $options: "i" };
+    }
 
     // ✅ Filter by Rooms & Guests
     if (rooms) query.rooms = Number(rooms);
@@ -419,40 +255,23 @@ const getAllDealsAdmin = async (req, res) => {
 
     // ✅ Fetch Deals with Filters & Sorting
     let deals = await Deal.find(query)
-      .populate("hotels", "name tripAdvisorRating facilities location")
-      .select("title prices boardBasis distanceToCenter distanceToBeach")
+      .populate("destination") // Populate destination details
+      .populate("hotels", "name tripAdvisorRating facilities location images") // Populate hotel details
+      .select("title prices boardBasis distanceToCenter distanceToBeach images") // Select relevant fields
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance
       .lean();
 
-    console.log("🚀 ~ getAllDeals ~ deals:", deals);
-    // ✅ Filter flight details based on the selected airport
-    deals = !airport
-      ? deals
-      : deals
-          .map((deal) => {
-            const relevantPrices = deal.prices.filter(
-              (p) => p.airport === airport
-            );
+    console.log("🚀 ~ getAllDealsAdmin ~ deals:", deals);
 
-            return relevantPrices.length > 0
-              ? {
-                  ...deal,
-                  prices: relevantPrices, // Only return prices for the selected airport
-                }
-              : null;
-          })
-          .filter(Boolean);
-
-    console.log("🚀 ~ getAllDeals ~ deals:", deals);
     res.json(deals);
   } catch (error) {
+    console.error("Error fetching deals for admin:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
 // ✅ Get a Single Deal (Only If Available in User's Selected Country)
-
 const getDealById = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id)
@@ -494,9 +313,14 @@ const getDealById = async (req, res) => {
 // ✅ Update a Deal (Admin Only)
 const updateDeal = async (req, res) => {
   try {
-    const deal = await Deal.findById(req.params.id);
-    if (!deal) return res.status(404).json({ message: "Deal not found" });
+    const dealId = req.params.id;
+    const deal = await Deal.findById(dealId);
 
+    if (!deal) {
+      return res.status(404).json({ message: "Deal not found" });
+    }
+
+    // Validate availableCountries if provided
     if (
       req.body.availableCountries &&
       (!Array.isArray(req.body.availableCountries) ||
@@ -506,11 +330,16 @@ const updateDeal = async (req, res) => {
         .status(400)
         .json({ message: "At least one country must be selected." });
     }
-    const updatedDeal = await Deal.findByIdAndUpdate(req.params.id, req.body, {
+
+    // Update the deal with the new data
+    const updatedDeal = await Deal.findByIdAndUpdate(dealId, req.body, {
       new: true,
+      runValidators: true, // Ensure that the updated data adheres to the schema
     });
+
     res.json({ message: "Deal updated successfully", deal: updatedDeal });
   } catch (error) {
+    console.error("Error updating deal:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -527,6 +356,7 @@ const deleteDeal = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 const getDealsByDestination = async (req, res) => {
   try {
     const { destinationId } = req.params;

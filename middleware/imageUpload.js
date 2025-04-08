@@ -52,17 +52,58 @@
 
 // module.exports = upload;
 
+// const multer = require("multer");
+// const path = require("path");
+// const fs = require("fs-extra");
+// require("dotenv").config();
+
+// // ✅ Local Storage Configuration
+// const uploadPath = process.env.LOCAL_IMAGE_PATH || "uploads/";
+// fs.ensureDirSync(uploadPath); // Ensure directory exists
+
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, uploadPath);
+//   },
+//   filename: (req, file, cb) => {
+//     cb(null, `${Date.now()}-${file.originalname}`);
+//   },
+// });
+
+// // ✅ Multer Upload Configuration
+// const upload = multer({
+//   storage: storage,
+//   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
+//   fileFilter: (req, file, cb) => {
+//     const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+//     if (!allowedTypes.includes(file.mimetype)) {
+//       return cb(
+//         new Error("Only JPEG, PNG, and JPG formats are allowed"),
+//         false
+//       );
+//     }
+//     cb(null, true);
+//   },
+// });
+
+// module.exports = upload;
+
 const multer = require("multer");
-const path = require("path");
+const { S3Client } = require("@aws-sdk/client-s3");
+const { Upload } = require("@aws-sdk/lib-storage");
 const fs = require("fs-extra");
 require("dotenv").config();
 
-// ✅ Local Storage Configuration
-const uploadPath = process.env.LOCAL_IMAGE_PATH || "uploads/";
-fs.ensureDirSync(uploadPath); // Ensure directory exists
+const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
 
-const storage = multer.diskStorage({
+// ✅ Multer memory storage (for S3)
+const memoryStorage = multer.memoryStorage();
+
+// ✅ Local disk storage
+const localStorage = multer.diskStorage({
   destination: (req, file, cb) => {
+    const uploadPath = process.env.LOCAL_IMAGE_PATH || "uploads/";
+    fs.ensureDirSync(uploadPath);
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
@@ -70,10 +111,9 @@ const storage = multer.diskStorage({
   },
 });
 
-// ✅ Multer Upload Configuration
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
+  storage: IMAGE_STORAGE === "s3" ? memoryStorage : localStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
     if (!allowedTypes.includes(file.mimetype)) {
@@ -86,4 +126,32 @@ const upload = multer({
   },
 });
 
-module.exports = upload;
+// ✅ S3 upload handler (to be used in controller)
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+const uploadToS3 = async (file) => {
+  const upload = new Upload({
+    client: s3Client,
+    params: {
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: `uploads/${Date.now()}-${file.originalname}`,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+      // ACL: "public-read",
+    },
+  });
+
+  const result = await upload.done();
+  return result.Location; // public URL
+};
+
+module.exports = {
+  upload,
+  uploadToS3,
+};

@@ -2,6 +2,7 @@ const Deal = require("../models/Deal");
 const Hotel = require("../models/Hotel");
 const Destination = require("../models/Destination");
 const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
+const { uploadToS3 } = require("../middleware/imageUpload");
 
 // ✅ Create a New Deal with Image Upload
 const createDeal = async (req, res) => {
@@ -48,10 +49,19 @@ const createDeal = async (req, res) => {
     }
     // Extract image URLs from the request
     let imageUrls = [];
+    // if (req.files && req.files.length > 0) {
+    //   imageUrls = req.files.map((file) =>
+    //     IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
+    //   );
+    // }
     if (req.files && req.files.length > 0) {
-      imageUrls = req.files.map((file) =>
-        IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
-      );
+      if (IMAGE_STORAGE === "s3") {
+        imageUrls = await Promise.all(
+          req.files.map((file) => uploadToS3(file))
+        );
+      } else {
+        imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+      }
     }
 
     const newDeal = new Deal({
@@ -334,13 +344,24 @@ const updateDeal = async (req, res) => {
 
     // Extract image URLs from the request
     let imageUrls = [];
-    if (req.files && req.files.length > 0) {
-      imageUrls = req.files.map((file) =>
-        IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
-      );
-    }
+    // if (req.files && req.files.length > 0) {
+    //   imageUrls = req.files.map((file) =>
+    //     IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
+    //   );
+    // }
 
     // Parse the JSON data from req.body.data
+
+    if (req.files && req.files.length > 0) {
+      if (IMAGE_STORAGE === "s3") {
+        imageUrls = await Promise.all(
+          req.files.map((file) => uploadToS3(file))
+        );
+      } else {
+        imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+      }
+    }
+
     const parsedData = JSON.parse(req.body.data);
 
     // Prepare the updated data

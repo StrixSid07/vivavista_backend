@@ -10,7 +10,8 @@ const {
   getDealsByDestination,
   searchDeals,
 } = require("../controllers/dealController");
-const upload = require("../middleware/imageUpload");
+// const upload = require("../middleware/imageUpload");
+const { upload, uploadToS3 } = require("../middleware/imageUpload");
 
 const router = express.Router();
 

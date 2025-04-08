@@ -312,38 +312,6 @@ const getDealById = async (req, res) => {
 };
 
 // ✅ Update a Deal (Admin Only)
-// const updateDeal = async (req, res) => {
-//   try {
-//     const dealId = req.params.id;
-//     const deal = await Deal.findById(dealId);
-
-//     if (!deal) {
-//       return res.status(404).json({ message: "Deal not found" });
-//     }
-
-//     // Validate availableCountries if provided
-//     if (
-//       req.body.availableCountries &&
-//       (!Array.isArray(req.body.availableCountries) ||
-//         req.body.availableCountries.length === 0)
-//     ) {
-//       return res
-//         .status(400)
-//         .json({ message: "At least one country must be selected." });
-//     }
-
-//     // Update the deal with the new data
-//     const updatedDeal = await Deal.findByIdAndUpdate(dealId, req.body, {
-//       new: true,
-//       runValidators: true, // Ensure that the updated data adheres to the schema
-//     });
-
-//     res.json({ message: "Deal updated successfully", deal: updatedDeal });
-//   } catch (error) {
-//     console.error("Error updating deal:", error);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
 const updateDeal = async (req, res) => {
   try {
     const dealId = req.params.id;
@@ -372,17 +340,22 @@ const updateDeal = async (req, res) => {
       );
     }
 
+    // Parse the JSON data from req.body.data
+    const parsedData = JSON.parse(req.body.data);
+
     // Prepare the updated data
     const updatedData = {
-      ...req.body,
+      ...parsedData,
       images:
-        imageUrls.length > 0 ? [...deal.images, ...imageUrls] : deal.images, // Keep existing images if no new ones are uploaded
+        imageUrls.length > 0 ? [...deal.images, ...imageUrls] : deal.images,
     };
+
+    console.log("Updating deal with data:", updatedData);
 
     // Update the deal with the new data
     const updatedDeal = await Deal.findByIdAndUpdate(dealId, updatedData, {
       new: true,
-      runValidators: true, // Ensure that the updated data adheres to the schema
+      runValidators: true,
     });
 
     res.json({ message: "Deal updated successfully", deal: updatedDeal });

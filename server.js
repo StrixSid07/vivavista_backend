@@ -43,7 +43,7 @@ const corsOptions = {
 
 const app = express();
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions)); // ✅ Handles preflight requests
+app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(helmet());
 app.use(morgan("dev"));
@@ -90,6 +90,7 @@ app.use("/api/airport", require("./routes/airportRoutes"));
 app.use("/api/trending", require("./routes/trandingRoutes"));
 app.use("/api/faqs", require("./routes/faqsRoutes"));
 app.use("/api/terms", require("./routes/termsRoutes"));
+app.use("/api/carousel", require("./routes/carouselRoutes"));
 
 // ✅ Apply Caching to Deals API
 // const cacheMiddleware = async (req, res, next) => {

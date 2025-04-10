@@ -1,20 +1,34 @@
 const Carousel = require("../models/Carousel");
+const { uploadToS3 } = require("../middleware/imageUpload");
+const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
 
 // POST: Upload new carousel
 exports.createCarousel = async (req, res) => {
   try {
-    const images = req.files.map((file) => `/uploads/${file.filename}`);
-    if (images.length > 5) {
+    if (!req.files || req.files.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "At least one image is required." });
+    }
+
+    if (req.files.length > 5) {
       return res.status(400).json({ message: "Max 5 images allowed." });
     }
 
-    const carousel = new Carousel({
-      images,
-    });
+    let imageUrls = [];
 
+    if (IMAGE_STORAGE === "s3") {
+      imageUrls = await Promise.all(req.files.map((file) => uploadToS3(file)));
+    } else {
+      imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+    }
+
+    const carousel = new Carousel({ images: imageUrls });
     const saved = await carousel.save();
+
     res.status(201).json(saved);
   } catch (err) {
+    console.error("Error creating carousel:", err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -37,15 +51,30 @@ exports.updateCarousel = async (req, res) => {
     if (!carousel)
       return res.status(404).json({ message: "Carousel not found" });
 
-    const newImages = req.files.map((file) => `/uploads/${file.filename}`);
-    if (newImages.length > 5)
-      return res.status(400).json({ message: "Max 5 images allowed." });
+    if (!req.files || req.files.length === 0) {
+      return res
+        .status(400)
+        .json({ message: "At least one image is required." });
+    }
 
-    carousel.images = newImages;
+    if (req.files.length > 5) {
+      return res.status(400).json({ message: "Max 5 images allowed." });
+    }
+
+    let imageUrls = [];
+
+    if (IMAGE_STORAGE === "s3") {
+      imageUrls = await Promise.all(req.files.map((file) => uploadToS3(file)));
+    } else {
+      imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+    }
+
+    carousel.images = imageUrls;
 
     const updated = await carousel.save();
     res.status(200).json(updated);
   } catch (err) {
+    console.error("Error updating carousel:", err);
     res.status(500).json({ error: err.message });
   }
 };

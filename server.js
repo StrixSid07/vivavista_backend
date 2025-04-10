@@ -25,6 +25,7 @@ const corsOptions = {
   origin: [
     "http://localhost:4200",
     "http://localhost:5173",
+    "http://localhost:5174",
     "http://54.172.95.174",
     "https://54.172.95.174",
     "https://vivavista.netlify.app",

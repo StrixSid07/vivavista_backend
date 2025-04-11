@@ -49,9 +49,9 @@ const DealSchema = new mongoose.Schema(
         },
       },
     ],
-
+    
     // Accommodations
-    hotels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hotel" }], // Reference to Hotel model
+    hotels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hotel" }],
 
     boardBasis: {
       type: String,
@@ -64,6 +64,9 @@ const DealSchema = new mongoose.Schema(
     isFeatured: { type: Boolean, default: false },
     distanceToCenter: { type: String }, // Example: "500m away"
     distanceToBeach: { type: String }, // Example: "300m away"
+    whatsIncluded: [{ type: String }], // List of included features
+    exclusiveAdditions: [{ type: String }], // List of optional extras or upgrades
+    termsAndConditions: [{ type: String }], //  List of T&Cs
   },
   { timestamps: true }
 );

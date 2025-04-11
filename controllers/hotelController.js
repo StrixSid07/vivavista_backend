@@ -4,16 +4,16 @@ const { fetchTripAdvisorData } = require("../services/tripAdvisorService");
 // ✅ Create a New Hotel and Fetch Initial Data from TripAdvisor
 const createHotel = async (req, res) => {
   try {
-    const { namehotel, about, facilities, location, locationId, externalBookingLink, images } = req.body;
+    const { name, about, facilities, location, locationId, externalBookingLink, images } = req.body;
 
     if (!locationId) {
       return res.status(400).json({ message: "TripAdvisor `locationId` is required." });
     }
-    console.log("this is hotle",namehotel);
+    console.log("this is hotle",name);
 
     // ✅ Save the hotel first (without TripAdvisor data)
     const newHotel = new Hotel({
-      name:namehotel,
+      name,
       about,
       facilities,
       location,

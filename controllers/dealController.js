@@ -27,6 +27,7 @@ const createDeal = async (req, res) => {
       termsAndConditions,
       rooms,
       guests,
+      tag,
     } = parsedData; // Now you can access properties directly
     console.log("this is req body", req.body.data);
     console.log("this is country", availableCountries);
@@ -86,9 +87,19 @@ const createDeal = async (req, res) => {
       whatsIncluded,
       exclusiveAdditions,
       termsAndConditions,
+      tag,
     });
 
     await newDeal.save();
+
+    if (destination) {
+      const updatedDestination = await Destination.findByIdAndUpdate(
+        destination,
+        { $addToSet: { deals: newDeal._id } },
+        { new: true }
+      );
+      console.log("Updated Destination:", updatedDestination);
+    }
 
     res
       .status(201)
@@ -164,10 +175,17 @@ const getAllDeals = async (req, res) => {
     if (guests) query.guests = Number(guests);
 
     // ✅ Apply Sorting
-    let sortOption = {};
-    if (sort === "lowest-price") sortOption["prices.price"] = 1;
-    if (sort === "highest-price") sortOption["prices.price"] = -1;
-    if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
+    // let sortOption = {};
+    // if (sort === "lowest-price") sortOption["prices.price"] = 1;
+    // if (sort === "highest-price") sortOption["prices.price"] = -1;
+    // if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
+    let sortOption = { "prices.price": 1 };
+
+    if (sort === "highest-price") {
+      sortOption = { "prices.price": -1 };
+    } else if (sort === "best-rating") {
+      sortOption = { "hotels.tripAdvisorRating": -1 };
+    }
 
     // ✅ Fetch Deals with Filters & Sorting
     let deals = await Deal.find(query)
@@ -175,7 +193,7 @@ const getAllDeals = async (req, res) => {
       .populate("hotels", "name tripAdvisorRating facilities location images")
       .populate({ path: "prices.hotel", select: "name" })
       .select(
-        "title availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured iternatiy whatsIncluded exclusiveAdditions termsAndConditions"
+        "title tag availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured iternatiy whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance
@@ -197,6 +215,16 @@ const getAllDeals = async (req, res) => {
           : null;
       })
       .filter(Boolean);
+
+    // ✅ Sort prices inside each deal
+    deals = deals.map((deal) => {
+      if (sort === "highest-price") {
+        deal.prices.sort((a, b) => b.price - a.price);
+      } else {
+        deal.prices.sort((a, b) => a.price - b.price);
+      }
+      return deal;
+    });
 
     console.log("🚀 ~ getAllDeals ~ deals:", deals);
     res.json(deals);
@@ -307,8 +335,18 @@ const getDealById = async (req, res) => {
       }
 
       // Filter price for the selected country
-      const countryPrice = deal.prices.find((p) => p.country === userCountry);
-      if (!countryPrice) {
+      // const countryPrice = deal.prices.find((p) => p.country === userCountry);
+      const countryPrices = deal.prices.filter(
+        (p) => p.country === userCountry
+      );
+
+      // if (!countryPrice) {
+      //   return res.status(404).json({
+      //     message: "Pricing not available for your selected country.",
+      //   });
+      // }
+
+      if (!countryPrices) {
         return res.status(404).json({
           message: "Pricing not available for your selected country.",
         });
@@ -316,7 +354,8 @@ const getDealById = async (req, res) => {
 
       return res.json({
         ...deal._doc,
-        prices: [countryPrice], // Only return the price for user's country
+        // prices: [countryPrice], // Only return the price for user's country
+        prices: countryPrices,
       });
     }
 
@@ -376,6 +415,28 @@ const updateDeal = async (req, res) => {
       images:
         imageUrls.length > 0 ? [...deal.images, ...imageUrls] : deal.images,
     };
+
+    // Handle destination change
+    if (
+      parsedData.destination &&
+      parsedData.destination !== deal.destination?.toString()
+    ) {
+      console.log("Destination changed. Updating references.");
+
+      // Remove deal from old destination
+      if (deal.destination) {
+        await Destination.findByIdAndUpdate(deal.destination, {
+          $pull: { deals: deal._id },
+        });
+        console.log("Removed from old destination:", deal.destination);
+      }
+
+      // Add deal to new destination
+      await Destination.findByIdAndUpdate(parsedData.destination, {
+        $addToSet: { deals: deal._id },
+      });
+      console.log("Added to new destination:", parsedData.destination);
+    }
 
     console.log("Updating deal with data:", updatedData);
 

@@ -49,7 +49,7 @@ const DealSchema = new mongoose.Schema(
         },
       },
     ],
-    
+
     // Accommodations
     hotels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hotel" }],
 
@@ -58,6 +58,7 @@ const DealSchema = new mongoose.Schema(
       enum: ["Half Board", "Full Board", "All Inclusive"],
       required: true,
     },
+    tag: { type: String },
     isTopDeal: { type: Boolean, default: false },
     isHotdeal: { type: Boolean, default: false },
     iternatiy: [{ type: String }],

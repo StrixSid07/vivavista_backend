@@ -65,23 +65,82 @@ exports.getLatestBlogs = async (req, res) => {
 };
 
 /** ✅ Get Homepage Data */
+// exports.getHomepageData = async (req, res) => {
+//   try {
+//     const featuredDeals = await Deal.find({ isFeatured: true })
+//     .populate({
+//       path: "destination",
+//       select: "name", // Only fetch name & image from Destination
+//     })
+//     .limit(6);
+//     const destinations = await Destination.find()
+//       .populate({
+//         path: "deals",
+//         model: "Deal",
+//       })
+//       .limit(6);
+//     const reviews = await Review.find().limit(6);
+//     const blogs = await Blog.find().sort({ createdAt: -1 }).limit(3);
+
+//     res.json({
+//       featuredDeals,
+//       destinations,
+//       reviews,
+//       blogs,
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: "Failed to fetch homepage data" });
+//   }
+// };
 exports.getHomepageData = async (req, res) => {
   try {
+    // Get featured deals (limit 6)
     const featuredDeals = await Deal.find({ isFeatured: true })
-    .populate({
-      path: "destination",
-      select: "name", // Only fetch name & image from Destination
-    })
-    .limit(6);
-    const destinations = await Destination.find()
+      .select(
+        "title images boardBasis isHotdeal isTopDeal destination prices days tag"
+      )
       .populate({
-        path: "deals",
-        model: "Deal",
+        path: "destination",
+        select: "name image", // Destination name & image only
+      })
+      .populate({
+        path: "prices.hotel", // Populating hotel in prices array
+        select: "name tripAdvisorRating tripAdvisorReviews", // Include rating & review count
       })
       .limit(6);
-    const reviews = await Review.find().limit(6);
-    const blogs = await Blog.find().sort({ createdAt: -1 }).limit(3);
 
+    // Get destinations (limit 6), with associated deals
+    const destinations = await Destination.find()
+      .select("name image isPopular")
+      .populate({
+        path: "deals",
+        select:
+          "title images boardBasis isHotdeal isTopDeal destination prices days tag",
+        populate: [
+          {
+            path: "destination",
+            select: "name image",
+          },
+          {
+            path: "prices.hotel",
+            select: "name tripAdvisorRating tripAdvisorReviews",
+          },
+        ],
+      })
+      .limit(6);
+
+    // Get reviews (limit 6)
+    const reviews = await Review.find()
+      .select("name comment rating createdAt")
+      .limit(6);
+
+    // Get latest blogs (limit 3)
+    const blogs = await Blog.find()
+      .sort({ createdAt: -1 })
+      .select("title image shortDescription createdAt")
+      .limit(3);
+
+    // Response
     res.json({
       featuredDeals,
       destinations,
@@ -89,6 +148,7 @@ exports.getHomepageData = async (req, res) => {
       blogs,
     });
   } catch (error) {
+    console.error("Homepage Data Error:", error);
     res.status(500).json({ error: "Failed to fetch homepage data" });
   }
 };

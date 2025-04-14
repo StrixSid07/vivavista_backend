@@ -16,9 +16,10 @@ const createDeal = async (req, res) => {
       destination,
       prices,
       hotels,
-      iternatiy,
+      itinerary,
       boardBasis,
       isTopDeal,
+      isHotdeal,
       distanceToCenter,
       distanceToBeach,
       days,
@@ -76,10 +77,11 @@ const createDeal = async (req, res) => {
       prices,
       boardBasis,
       isTopDeal,
+      isHotdeal,
       destination,
       hotels,
       rooms,
-      iternatiy,
+      itinerary,
       guests,
       days,
       distanceToCenter,
@@ -193,7 +195,7 @@ const getAllDeals = async (req, res) => {
       .populate("hotels", "name tripAdvisorRating facilities location images")
       .populate({ path: "prices.hotel", select: "name" })
       .select(
-        "title tag availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured iternatiy whatsIncluded exclusiveAdditions termsAndConditions"
+        "title tag availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance
@@ -320,7 +322,8 @@ const getAllDealsAdmin = async (req, res) => {
 const getDealById = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id)
-      .populate("destination") // Populate destination details
+      .populate("destination", "name isPopular")
+      .populate("prices.hotel")
       .populate("hotels");
 
     if (!deal) return res.status(404).json({ message: "Deal not found" });
@@ -367,6 +370,106 @@ const getDealById = async (req, res) => {
 };
 
 // ✅ Update a Deal (Admin Only)
+// const updateDeal = async (req, res) => {
+//   try {
+//     const dealId = req.params.id;
+//     const deal = await Deal.findById(dealId);
+
+//     if (!deal) {
+//       return res.status(404).json({ message: "Deal not found" });
+//     }
+
+//     // Validate availableCountries if provided
+//     if (
+//       req.body.availableCountries &&
+//       (!Array.isArray(req.body.availableCountries) ||
+//         req.body.availableCountries.length === 0)
+//     ) {
+//       return res
+//         .status(400)
+//         .json({ message: "At least one country must be selected." });
+//     }
+
+//     // Extract image URLs from the request
+//     let imageUrls = [];
+//     // if (req.files && req.files.length > 0) {
+//     //   imageUrls = req.files.map((file) =>
+//     //     IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
+//     //   );
+//     // }
+
+//     // Parse the JSON data from req.body.data
+
+//     if (req.files && req.files.length > 0) {
+//       if (IMAGE_STORAGE === "s3") {
+//         imageUrls = await Promise.all(
+//           req.files.map((file) => uploadToS3(file))
+//         );
+//       } else {
+//         imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+//       }
+//     }
+
+//     const parsedData = JSON.parse(req.body.data);
+
+//     // Validate itinerary if provided
+//     if (parsedData.itinerary) {
+//       if (!Array.isArray(parsedData.itinerary)) {
+//         return res.status(400).json({ message: "Itinerary must be an array." });
+//       }
+//       for (let i = 0; i < parsedData.itinerary.length; i++) {
+//         const item = parsedData.itinerary[i];
+//         if (typeof item !== "object" || !item.title || !item.description) {
+//           return res.status(400).json({
+//             message: `Itinerary item at index ${i} must have both title and description.`,
+//           });
+//         }
+//       }
+//     }
+
+//     // Prepare the updated data
+//     const updatedData = {
+//       ...parsedData,
+//       images:
+//         imageUrls.length > 0 ? [...deal.images, ...imageUrls] : deal.images,
+//     };
+
+//     // Handle destination change
+//     if (
+//       parsedData.destination &&
+//       parsedData.destination !== deal.destination?.toString()
+//     ) {
+//       console.log("Destination changed. Updating references.");
+
+//       // Remove deal from old destination
+//       if (deal.destination) {
+//         await Destination.findByIdAndUpdate(deal.destination, {
+//           $pull: { deals: deal._id },
+//         });
+//         console.log("Removed from old destination:", deal.destination);
+//       }
+
+//       // Add deal to new destination
+//       await Destination.findByIdAndUpdate(parsedData.destination, {
+//         $addToSet: { deals: deal._id },
+//       });
+//       console.log("Added to new destination:", parsedData.destination);
+//     }
+
+//     console.log("Updating deal with data:", updatedData);
+
+//     // Update the deal with the new data
+//     const updatedDeal = await Deal.findByIdAndUpdate(dealId, updatedData, {
+//       new: true,
+//       runValidators: true,
+//     });
+
+//     res.json({ message: "Deal updated successfully", deal: updatedDeal });
+//   } catch (error) {
+//     console.error("Error updating deal:", error);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
 const updateDeal = async (req, res) => {
   try {
     const dealId = req.params.id;
@@ -389,14 +492,6 @@ const updateDeal = async (req, res) => {
 
     // Extract image URLs from the request
     let imageUrls = [];
-    // if (req.files && req.files.length > 0) {
-    //   imageUrls = req.files.map((file) =>
-    //     IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
-    //   );
-    // }
-
-    // Parse the JSON data from req.body.data
-
     if (req.files && req.files.length > 0) {
       if (IMAGE_STORAGE === "s3") {
         imageUrls = await Promise.all(
@@ -409,11 +504,26 @@ const updateDeal = async (req, res) => {
 
     const parsedData = JSON.parse(req.body.data);
 
+    // Validate itinerary if provided
+    if (parsedData.itinerary) {
+      if (!Array.isArray(parsedData.itinerary)) {
+        return res.status(400).json({ message: "Itinerary must be an array." });
+      }
+      for (let i = 0; i < parsedData.itinerary.length; i++) {
+        const item = parsedData.itinerary[i];
+        if (typeof item !== "object" || !item.title || !item.description) {
+          return res.status(400).json({
+            message: `Itinerary item at index ${i} must have both title and description.`,
+          });
+        }
+      }
+    }
+
     // Prepare the updated data
     const updatedData = {
       ...parsedData,
       images:
-        imageUrls.length > 0 ? [...deal.images, ...imageUrls] : deal.images,
+        imageUrls.length > 0 ? [...deal.images, ...imageUrls] : deal.images, // Keep existing images if no new images
     };
 
     // Handle destination change

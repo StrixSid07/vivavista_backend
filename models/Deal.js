@@ -1,5 +1,16 @@
 const mongoose = require("mongoose");
 
+const ItineraryItemSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+});
+
 const DealSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
@@ -61,7 +72,10 @@ const DealSchema = new mongoose.Schema(
     tag: { type: String },
     isTopDeal: { type: Boolean, default: false },
     isHotdeal: { type: Boolean, default: false },
-    iternatiy: [{ type: String }],
+    itinerary: {
+      type: [ItineraryItemSchema],
+      default: [],
+    },
     isFeatured: { type: Boolean, default: false },
     distanceToCenter: { type: String }, // Example: "500m away"
     distanceToBeach: { type: String }, // Example: "300m away"

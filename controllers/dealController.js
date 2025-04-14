@@ -29,6 +29,7 @@ const createDeal = async (req, res) => {
       rooms,
       guests,
       tag,
+      LowDeposite,
     } = parsedData; // Now you can access properties directly
     console.log("this is req body", req.body.data);
     console.log("this is country", availableCountries);
@@ -90,6 +91,7 @@ const createDeal = async (req, res) => {
       exclusiveAdditions,
       termsAndConditions,
       tag,
+      LowDeposite,
     });
 
     await newDeal.save();
@@ -195,7 +197,7 @@ const getAllDeals = async (req, res) => {
       .populate("hotels", "name tripAdvisorRating facilities location images")
       .populate({ path: "prices.hotel", select: "name" })
       .select(
-        "title tag availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured itinerary whatsIncluded exclusiveAdditions termsAndConditions"
+        "title tag LowDeposite availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance

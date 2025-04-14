@@ -70,6 +70,7 @@ const DealSchema = new mongoose.Schema(
       required: true,
     },
     tag: { type: String },
+    LowDeposite: { type: String },
     isTopDeal: { type: Boolean, default: false },
     isHotdeal: { type: Boolean, default: false },
     itinerary: {

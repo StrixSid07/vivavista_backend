@@ -195,7 +195,7 @@ const getAllDeals = async (req, res) => {
     let deals = await Deal.find(query)
       .populate("destination")
       .populate("hotels", "name tripAdvisorRating facilities location images")
-      .populate({ path: "prices.hotel", select: "name" })
+      .populate({ path: "prices.hotel", select: "name tripAdvisorRating tripAdvisorReviews" })
       .select(
         "title tag LowDeposite availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
@@ -321,6 +321,55 @@ const getAllDealsAdmin = async (req, res) => {
 };
 
 // ✅ Get a Single Deal (Only If Available in User's Selected Country)
+// const getDealById = async (req, res) => {
+//   try {
+//     const deal = await Deal.findById(req.params.id)
+//       .populate("destination", "name isPopular")
+//       .populate("prices.hotel")
+//       .populate("hotels");
+
+//     if (!deal) return res.status(404).json({ message: "Deal not found" });
+
+//     // If the user is NOT an admin, apply country restriction
+//     if (!req.user || req.user.role !== "admin") {
+//       const userCountry = req.session.country || "UK";
+//       if (!deal.availableCountries.includes(userCountry)) {
+//         return res.status(403).json({
+//           message: "This deal is not available in your selected country.",
+//         });
+//       }
+
+//       // Filter price for the selected country
+//       // const countryPrice = deal.prices.find((p) => p.country === userCountry);
+//       const countryPrices = deal.prices.filter(
+//         (p) => p.country === userCountry
+//       );
+
+//       // if (!countryPrice) {
+//       //   return res.status(404).json({
+//       //     message: "Pricing not available for your selected country.",
+//       //   });
+//       // }
+
+//       if (!countryPrices) {
+//         return res.status(404).json({
+//           message: "Pricing not available for your selected country.",
+//         });
+//       }
+
+//       return res.json({
+//         ...deal._doc,
+//         // prices: [countryPrice], // Only return the price for user's country
+//         prices: countryPrices,
+//       });
+//     }
+
+//     // Admin gets full deal data
+//     res.json(deal);
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
 const getDealById = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id)
@@ -329,6 +378,11 @@ const getDealById = async (req, res) => {
       .populate("hotels");
 
     if (!deal) return res.status(404).json({ message: "Deal not found" });
+
+    // Get today's date and the date three days from now
+    const today = new Date();
+    const threeDaysFromNow = new Date();
+    threeDaysFromNow.setDate(today.getDate() + 3);
 
     // If the user is NOT an admin, apply country restriction
     if (!req.user || req.user.role !== "admin") {
@@ -339,32 +393,17 @@ const getDealById = async (req, res) => {
         });
       }
 
-      // Filter price for the selected country
-      // const countryPrice = deal.prices.find((p) => p.country === userCountry);
-      const countryPrices = deal.prices.filter(
-        (p) => p.country === userCountry
-      );
-
-      // if (!countryPrice) {
-      //   return res.status(404).json({
-      //     message: "Pricing not available for your selected country.",
-      //   });
-      // }
-
-      if (!countryPrices) {
-        return res.status(404).json({
-          message: "Pricing not available for your selected country.",
-        });
-      }
-
-      return res.json({
-        ...deal._doc,
-        // prices: [countryPrice], // Only return the price for user's country
-        prices: countryPrices,
+      // Filter prices for the selected country and with startdate more than 3 days from today
+      const countryPrices = deal.prices.filter((p) => {
+        const startDate = new Date(p.startdate);
+        return p.country === userCountry && startDate > threeDaysFromNow;
       });
+
+      // Set prices to an empty array if no valid prices are found
+      deal.prices = countryPrices.length > 0 ? countryPrices : [];
     }
 
-    // Admin gets full deal data
+    // Return the deal with the filtered prices (which may be empty)
     res.json(deal);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });

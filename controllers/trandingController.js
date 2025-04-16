@@ -19,7 +19,11 @@ exports.getHotDeals = async (req, res) => {
 
 exports.getTopDeals = async (req, res) => {
   try {
-    const deals = await Deal.find({ isTopDeal: true });
+    const deals = await Deal.find({ isTopDeal: true })
+      .populate("prices.hotel")
+      .select(
+        "title tag description prices boardBasis days images isTopDeal isHotdeal"
+      );
 
     res.json(deals);
   } catch {
@@ -43,6 +47,7 @@ exports.getTopdealByDestination = async (req, res) => {
 
     const deals = await Deal.find(query)
       .populate("destination")
+      .populate("prices.hotel")
       .populate("hotels")
       .limit(6);
 

@@ -140,5 +140,5 @@ if (isLocal) {
 }
 
 // ✅ Start Cron Job for Hotel Ratings Update
-// const updateHotelRatings = require("./cron/hotelUpdater");
-// updateHotelRatings();
+const updateHotelRatings = require("./cron/hotelUpdater");
+updateHotelRatings();

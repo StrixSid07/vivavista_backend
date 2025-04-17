@@ -16,10 +16,12 @@ const createDeal = async (req, res) => {
       destination,
       prices,
       hotels,
+      holidaycategories,
       itinerary,
       boardBasis,
       isTopDeal,
       isHotdeal,
+      isFeatured,
       distanceToCenter,
       distanceToBeach,
       days,
@@ -79,8 +81,10 @@ const createDeal = async (req, res) => {
       boardBasis,
       isTopDeal,
       isHotdeal,
+      isFeatured,
       destination,
       hotels,
+      holidaycategories,
       rooms,
       itinerary,
       guests,
@@ -195,9 +199,12 @@ const getAllDeals = async (req, res) => {
     let deals = await Deal.find(query)
       .populate("destination")
       .populate("hotels", "name tripAdvisorRating facilities location images")
-      .populate({ path: "prices.hotel", select: "name tripAdvisorRating tripAdvisorReviews" })
+      .populate({
+        path: "prices.hotel",
+        select: "name tripAdvisorRating tripAdvisorReviews",
+      })
       .select(
-        "title tag LowDeposite availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured itinerary whatsIncluded exclusiveAdditions termsAndConditions"
+        "title tag LowDeposite availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance

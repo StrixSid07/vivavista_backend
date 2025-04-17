@@ -91,6 +91,7 @@ app.use("/api/trending", require("./routes/trandingRoutes"));
 app.use("/api/faqs", require("./routes/faqsRoutes"));
 app.use("/api/terms", require("./routes/termsRoutes"));
 app.use("/api/carousel", require("./routes/carouselRoutes"));
+app.use("/api/holidays", require("./routes/holidayRoutes"));
 
 // ✅ Apply Caching to Deals API
 // const cacheMiddleware = async (req, res, next) => {
@@ -139,5 +140,5 @@ if (isLocal) {
 }
 
 // ✅ Start Cron Job for Hotel Ratings Update
-const updateHotelRatings = require("./cron/hotelUpdater");
-updateHotelRatings();
+// const updateHotelRatings = require("./cron/hotelUpdater");
+// updateHotelRatings();

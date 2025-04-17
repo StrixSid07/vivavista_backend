@@ -9,15 +9,6 @@ exports.getDestinations = async (req, res) => {
   }
 };
 
-// exports.getDestinationDropdown = async (req, res) => {
-//   try {
-//     const destination = await Destination.find();
-//     res.json(destination);
-//   } catch (error) {
-//     res.status(500).json({ error: "Server error" });
-//   }
-// };
-
 exports.getDestinationDropdown = async (req, res) => {
   try {
     const destinations = await Destination.find(

@@ -22,6 +22,12 @@ const DealSchema = new mongoose.Schema(
       ref: "Destination",
       required: false,
     },
+    holidaycategories: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Holiday",
+      },
+    ],
     days: {
       type: Number,
       require: true,

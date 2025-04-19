@@ -22,8 +22,9 @@ exports.getTopDeals = async (req, res) => {
   try {
     const deals = await Deal.find({ isTopDeal: true })
       .populate("prices.hotel")
+      .populate("destination", "name")
       .select(
-        "title tag description prices boardBasis days images isTopDeal isHotdeal"
+        "title destination description prices boardBasis days images isTopDeal isHotdeal"
       );
 
     res.json(deals);

@@ -6,10 +6,11 @@ const {
   getHotelById,
   updateHotel,
   deleteHotel,
+  deleteHotelImage
 } = require("../controllers/hotelController");
 
 const router = express.Router();
-
+const { upload, uploadToS3 } = require("../middleware/imageUpload");
 /**
  * @swagger
  * tags:
@@ -47,7 +48,7 @@ const router = express.Router();
  *       403:
  *         description: Admin access required
  */
-router.post("/", createHotel);
+router.post("/", protect, isAdmin,upload.array("images", 5),createHotel);
 /**
  * @swagger
  * tags:
@@ -124,8 +125,8 @@ router.get("/:id", getHotelById);
  */
 // router.put("/:id", protect, isAdmin, updateHotel);
 
-router.put("/:id", updateHotel);
-
+router.put("/:id", protect, isAdmin,upload.array("images", 5),updateHotel);
+router.delete('/image/:hotelId',protect, isAdmin, deleteHotelImage);
 /**
  * @swagger
  * /api/hotels/{id}:
@@ -147,6 +148,6 @@ router.put("/:id", updateHotel);
  *       403:
  *         description: Admin access required
  */
-router.delete("/:id", deleteHotel);
+router.delete("/:id",protect, isAdmin, deleteHotel);
 
 module.exports = router;

@@ -9,6 +9,7 @@ const {
   getAllDealsAdmin,
   getDealsByDestination,
   searchDeals,
+  deleteDealImage
 } = require("../controllers/dealController");
 // const upload = require("../middleware/imageUpload");
 const { upload, uploadToS3 } = require("../middleware/imageUpload");
@@ -43,7 +44,10 @@ const router = express.Router();
  *       200:
  *         description: Successfully retrieved deals
  */
-router.get("/", getAllDeals);
+router.get("/",getAllDeals);
+// routes/deal.js
+router.delete('/image/:dealId',protect, isAdmin, deleteDealImage);
+
 
 /**
  * @swagger
@@ -125,7 +129,7 @@ router.get("/:id", getDealById);
  *       403:
  *         description: Admin access required
  */
-router.post("/", upload.array("images", 5), createDeal);
+router.post("/",protect, isAdmin, upload.array("images", 5), createDeal);
 
 /**
  * @swagger
@@ -165,7 +169,7 @@ router.post("/", upload.array("images", 5), createDeal);
  *       403:
  *         description: Admin access required
  */
-router.put("/:id", upload.array("images", 5), updateDeal);
+router.put("/:id",protect, isAdmin, upload.array("images", 5), updateDeal);
 
 /**
  * @swagger
@@ -188,7 +192,7 @@ router.put("/:id", upload.array("images", 5), updateDeal);
  *       403:
  *         description: Admin access required
  */
-router.delete("/:id", deleteDeal);
+router.delete("/:id",protect, isAdmin, deleteDeal);
 
 router.get("/destination/:destinationId", getDealsByDestination);
 

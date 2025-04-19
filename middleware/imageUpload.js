@@ -89,7 +89,7 @@
 // module.exports = upload;
 
 const multer = require("multer");
-const { S3Client } = require("@aws-sdk/client-s3");
+const { S3Client ,DeleteObjectCommand} = require("@aws-sdk/client-s3");
 const { Upload } = require("@aws-sdk/lib-storage");
 const fs = require("fs-extra");
 require("dotenv").config();
@@ -150,8 +150,30 @@ const uploadToS3 = async (file) => {
   const result = await upload.done();
   return result.Location; // public URL
 };
+const deleteFromS3 = async (imageUrl) => {
+  try {
+    const bucketName = process.env.AWS_S3_BUCKET;
+
+    // Extract the key from the image URL
+    const url = new URL(imageUrl);
+    const key = decodeURIComponent(url.pathname.slice(1)); // remove leading "/"
+
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    await s3Client.send(command);
+    console.log("✅ Image deleted from S3:", key);
+    return true;
+  } catch (error) {
+    console.error("❌ Failed to delete image from S3:", error);
+    throw error;
+  }
+};
 
 module.exports = {
   upload,
   uploadToS3,
+  deleteFromS3
 };

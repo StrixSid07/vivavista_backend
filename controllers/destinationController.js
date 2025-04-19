@@ -1,5 +1,7 @@
 const Destination = require("../models/Destination");
-const {uploadToS3,deleteFromS3} =require("../middleware/imageUpload");
+const Deal = require("../models/Deal");
+
+const { uploadToS3, deleteFromS3 } = require("../middleware/imageUpload");
 require("dotenv").config();
 exports.getDestinations = async (req, res) => {
   try {
@@ -14,7 +16,7 @@ exports.getDestinationDropdown = async (req, res) => {
   try {
     const destinations = await Destination.find(
       {},
-      "_id name image isPopular"
+      "_id name"
     ).sort({ name: 1 });
     res.json(destinations);
   } catch (error) {
@@ -56,7 +58,7 @@ exports.addDestination = async (req, res) => {
       return res.status(400).json({ message: "name is required" });
     }
     let imageUrl = "";
-    
+
     const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
     if (req.file) {
       if (IMAGE_STORAGE === "s3") {
@@ -65,7 +67,7 @@ exports.addDestination = async (req, res) => {
         imageUrl = `/uploads/${req.file.filename}`;
       }
     }
-    
+
     const destination = new Destination({
       name,
       isPopular,
@@ -81,7 +83,7 @@ exports.addDestination = async (req, res) => {
 
 exports.updateDestination = async (req, res) => {
   const { id } = req.params;
-  const { name, isPopular} = req.body;
+  const { name, isPopular } = req.body;
 
   try {
     const destination = await Destination.findById(id);
@@ -90,7 +92,7 @@ exports.updateDestination = async (req, res) => {
       return res.status(404).json({ message: "Destination not found" });
     }
     let imageUrl = "";
-    
+
     const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
     if (req.file) {
       if (IMAGE_STORAGE === "s3") {
@@ -99,7 +101,7 @@ exports.updateDestination = async (req, res) => {
         imageUrl = `/uploads/${req.file.filename}`;
       }
     }
-    
+
     if (name) destination.name = name;
     if (typeof isPopular !== "undefined") destination.isPopular = isPopular;
     if (imageUrl) destination.image = imageUrl;
@@ -126,5 +128,73 @@ exports.deleteDestination = async (req, res) => {
   } catch (error) {
     console.error("Delete Error:", error);
     res.status(500).json({ error: "Server error" });
+  }
+};
+
+exports.getFilterDealsByDestination = async (req, res) => {
+  try {
+    const rawName = req.query.name;
+
+    if (!rawName || typeof rawName !== "string") {
+      return res.status(400).json({ message: "Destination name is required" });
+    }
+
+    const name = rawName.trim();
+
+    if (!name) {
+      return res
+        .status(400)
+        .json({ message: "Destination name cannot be empty" });
+    }
+
+    // Case-insensitive search
+    const destination = await Destination.findOne({
+      name: { $regex: new RegExp(`^${name}$`, "i") },
+    });
+
+    if (!destination) {
+      return res
+        .status(404)
+        .json({ message: `Destination '${name}' not found` });
+    }
+
+    // Fetch deals by destination ID, and populate prices.hotel
+    const deals = await Deal.find({
+      destination: destination._id,
+    })
+      .select(
+        "title destination images days prices boardBasis tag isTopDeal isHotdeal"
+      )
+      .populate("holidaycategories", "name")
+      .populate("prices.hotel", "tripAdvisorRating tripAdvisorReviews")
+      .populate("destination", "name");
+
+    // Clean up prices array
+    const cleanedDeals = deals.map((deal) => {
+      const cleanedPrices = deal.prices.map((price) => ({
+        _id: price._id,
+        price: price.price,
+        hotel: price.hotel,
+      }));
+
+      return {
+        _id: deal._id,
+        title: deal.title,
+        destination: { name: destination.name },
+        images: deal.images,
+        days: deal.days,
+        prices: cleanedPrices,
+        boardBasis: deal.boardBasis,
+        tag: deal.tag,
+        isTopDeal: deal.isTopDeal,
+        isHotdeal: deal.isHotdeal,
+        holidaycategories: deal.holidaycategories,
+      };
+    });
+
+    res.status(200).json(cleanedDeals);
+  } catch (error) {
+    console.error("Error in getFilterDealsByDestination:", error);
+    res.status(500).json({ message: "Server error", error });
   }
 };

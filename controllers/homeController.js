@@ -3,7 +3,8 @@ const Destination = require("../models/Destination");
 const Review = require("../models/Review");
 const Blog = require("../models/Blog");
 const Newsletter = require("../models/Newsletter");
-
+const { uploadToS3, deleteFromS3 } = require("../middleware/imageUpload");
+require("dotenv").config();
 /** ✅ Get Featured Deals */
 exports.getFeaturedDeals = async (req, res) => {
   try {
@@ -51,6 +52,74 @@ exports.getBlogs = async (req, res) => {
     res.json(blogs);
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch blogs" });
+  }
+};
+exports.deleteBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const blog = await Blog.findByIdAndDelete(id);
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+    res.json({ message: "Blog deleted successfully" });
+  } catch (error) {}
+};
+exports.addBlog = async (req, res) => {
+  const { title, content } = req.body;
+  console.log(req.body);
+  try {
+    let imageUrl = "";
+
+    const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
+    if (req.file) {
+      if (IMAGE_STORAGE === "s3") {
+        imageUrl = await uploadToS3(req.file); // Assuming this returns a string URL
+      } else {
+        imageUrl = `/uploads/${req.file.filename}`;
+      }
+    }
+    const blog = new Blog({
+      title,
+      content,
+      image: imageUrl,
+    });
+    blog.save();
+    res.status(201).json({ message: "Blog created successfully", blog: blog });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create blogs" });
+  }
+};
+exports.updateBlog = async (req, res) => {
+  const { id } = req.params;
+  const { title, content } = req.body;
+
+  try {
+    const blog = await Blog.findById(id);
+
+    if (!blog) {
+      return res.status(404).json({ message: "Blog not found" });
+    }
+    let imageUrl = "";
+
+    const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
+    if (req.file) {
+      if (IMAGE_STORAGE === "s3") {
+        imageUrl = await uploadToS3(req.file); // Assuming this returns a string URL
+      } else {
+        imageUrl = `/uploads/${req.file.filename}`;
+      }
+    }
+
+    if (title) blog.title = title;
+    if (content) blog.content = content;
+
+    if (imageUrl) blog.image = imageUrl;
+
+    await blog.save();
+    res.json({ message: "Blog updated successfully", blog });
+  } catch (error) {
+    console.error("Update Error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -107,7 +176,7 @@ exports.getHomepageData = async (req, res) => {
         path: "prices.hotel", // Populating hotel in prices array
         select: "name tripAdvisorRating tripAdvisorReviews", // Include rating & review count
       })
-      .limit(6);
+      .limit(7);
 
     // Get destinations (limit 6), with associated deals
     const destinations = await Destination.find()
@@ -127,8 +196,8 @@ exports.getHomepageData = async (req, res) => {
           },
         ],
       })
-      .limit(6);
-
+      .limit(7);
+    console.log(destinations);
     // Get reviews (limit 6)
     const reviews = await Review.find()
       .select("name comment rating createdAt")
@@ -152,7 +221,32 @@ exports.getHomepageData = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch homepage data" });
   }
 };
+exports.deleteBlogImage = async (req, res) => {
+  const { blogId } = req.params;
 
+  try {
+    const blog = await Blog.findById(blogId);
+
+    if (!blog) {
+      return res.status(404).json({ message: "Destination not found" });
+    }
+
+    const imageUrl = blog.image;
+
+    // Optional: Delete from S3 or any cloud storage
+    await deleteFromS3(imageUrl);
+
+    // Remove image URL from MongoDB
+    blog.image = "";
+    await blog.save();
+
+    console.log("Image deleted successfully");
+    res.status(200).json({ message: "Image deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 /** ✅ Subscribe to Newsletter */
 exports.subscribeNewsletter = async (req, res) => {
   try {

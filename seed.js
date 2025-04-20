@@ -16,7 +16,7 @@ const seedDatabase = async () => {
     // ✅ Clear Existing Data
     // await User.deleteMany();
     // await Hotel.deleteMany();
-    await Deal.deleteMany();
+    // await Deal.deleteMany();
     // await Booking.deleteMany();
     console.log("🗑 Database Cleared");
 

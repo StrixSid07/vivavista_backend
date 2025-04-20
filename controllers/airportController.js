@@ -1,15 +1,5 @@
 const Airport = require("../models/Airport");
 
-// // Get all airports
-// exports.getAllAirports = async (req, res) => {
-//   try {
-//     const airports = await Airport.find();
-//     res.json(airports);
-//   } catch (err) {
-//     res.status(500).json({ message: "Server Error" });
-//   }
-// };
-
 exports.getAllAirports = async (req, res) => {
   try {
     const airports = await Airport.find(

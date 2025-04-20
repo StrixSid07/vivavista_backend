@@ -12,7 +12,7 @@ const { protect, isAdmin } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-router.post("/admin/create-user", createUserByAdmin); // Only admins can create other users
+router.post("/admin/create-user", isAdmin, protect, createUserByAdmin); // Only admins can create other users
 /**
  * @swagger
  * tags:
@@ -90,8 +90,8 @@ router.post("/login", loginUser);
  *       401:
  *         description: Unauthorized
  */
-// router.get("/profile", protect, getUserProfile);
-router.get("/profile", getUserProfile);
+router.get("/profile", protect, getUserProfile);
+// router.get("/profile", getUserProfile);
 
 /**
  * @swagger
@@ -141,7 +141,7 @@ router.get("/users", getUsers);
  *       403:
  *         description: Admin access required
  */
-router.put("/users/:id", updateUserRole);
+router.put("/users/:id", isAdmin, protect, updateUserRole);
 
 /**
  * @swagger
@@ -164,6 +164,6 @@ router.put("/users/:id", updateUserRole);
  *       403:
  *         description: Admin access required
  */
-router.delete("/users/:id", deleteUser);
+router.delete("/users/:id", isAdmin, protect, deleteUser);
 
 module.exports = router;

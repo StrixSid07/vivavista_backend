@@ -9,6 +9,7 @@ const {
   getHomepageData,
   subscribeNewsletter,
   addBlog,
+  getBlogById,
   deleteBlogImage,
   updateBlog,
   deleteBlog,
@@ -21,6 +22,7 @@ router.get("/destinations", getDestinations);
 router.get("/destinations/popular", getPopularDestinations);
 router.get("/reviews", getReviews);
 router.get("/blogs", getBlogs);
+router.get("/blogs/:id", getBlogById);
 router.post("/blogs", upload.single("images"), addBlog);
 router.get("/blogs/latest", getLatestBlogs);
 router.get("/homepage", getHomepageData);

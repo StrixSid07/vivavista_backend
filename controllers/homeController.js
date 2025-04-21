@@ -5,6 +5,8 @@ const Blog = require("../models/Blog");
 const Newsletter = require("../models/Newsletter");
 const { uploadToS3, deleteFromS3 } = require("../middleware/imageUpload");
 require("dotenv").config();
+const validator = require("validator");
+
 /** ✅ Get Featured Deals */
 exports.getFeaturedDeals = async (req, res) => {
   try {
@@ -265,15 +267,89 @@ exports.deleteBlogImage = async (req, res) => {
   }
 };
 /** ✅ Subscribe to Newsletter */
+// exports.subscribeNewsletter = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     if (!email || !email.includes("@")) {
+//       return res.status(400).json({ message: "Invalid email format" });
+//     }
+//     await Newsletter.create({ email });
+//     res.json({ message: "Subscription successful!" });
+//   } catch (error) {
+//     res.status(500).json({ error: "Failed to subscribe to newsletter" });
+//   }
+// };
+
 exports.subscribeNewsletter = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email || !email.includes("@")) {
+    if (!email || !validator.isEmail(email)) {
       return res.status(400).json({ message: "Invalid email format" });
     }
-    await Newsletter.create({ email });
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    const existing = await Newsletter.findOne({ email: sanitizedEmail });
+    if (existing) {
+      return res.status(409).json({ message: "Email already subscribed" });
+    }
+
+    await Newsletter.create({ email: sanitizedEmail });
     res.json({ message: "Subscription successful!" });
   } catch (error) {
     res.status(500).json({ error: "Failed to subscribe to newsletter" });
+  }
+};
+
+// Get all newsletter subscribers
+exports.getAllSubscribers = async (req, res) => {
+  try {
+    const subscribers = await Newsletter.find().sort({ createdAt: -1 });
+    res.json(subscribers);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch subscribers" });
+  }
+};
+
+// Update subscriber email
+exports.updateSubscriber = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    if (!email || !validator.isEmail(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const sanitizedEmail = email.trim().toLowerCase();
+
+    const updated = await Newsletter.findByIdAndUpdate(
+      id,
+      { email: sanitizedEmail },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Subscriber not found" });
+    }
+
+    res.json({ message: "Subscriber updated successfully", data: updated });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update subscriber" });
+  }
+};
+
+// Delete subscriber
+exports.deleteSubscriber = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deleted = await Newsletter.findByIdAndDelete(id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Subscriber not found" });
+    }
+
+    res.json({ message: "Subscriber deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete subscriber" });
   }
 };

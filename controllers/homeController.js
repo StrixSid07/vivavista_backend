@@ -54,6 +54,23 @@ exports.getBlogs = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch blogs" });
   }
 };
+
+exports.getBlogById = async (req, res) => {
+  try {
+    const blogId = req.params.id;
+    const blog = await Blog.findById(blogId);
+
+    if (!blog) {
+      return res.status(404).json({ error: "Blog not found" });
+    }
+
+    res.json(blog);
+  } catch (error) {
+    console.error("Error fetching blog by ID:", error);
+    res.status(500).json({ error: "Failed to fetch blog" });
+  }
+};
+
 exports.deleteBlog = async (req, res) => {
   try {
     const { id } = req.params;

@@ -1,6 +1,15 @@
 const express = require("express");
 const { protect, isAdmin } = require("../middleware/authMiddleware");
-const { createBooking, getUserBookings, getAllBookings, updateBookingStatus } = require("../controllers/bookingController");
+const {
+  createBooking,
+  createBookingByAdmin,
+  getUserBookings,
+  getAllBookings,
+  updateBooking,
+  updateBookingStatus,
+  deleteBooking,
+  getDealsDropdown,
+} = require("../controllers/bookingController");
 
 const router = express.Router();
 /**
@@ -50,7 +59,7 @@ const router = express.Router();
  */
 // ✅ User Booking (Logged-in or Guest)
 router.post("/", createBooking);
-
+router.post("/createbyadmin", protect, isAdmin, createBookingByAdmin);
 // ✅ Get Bookings for Logged-in Users
 router.get("/my-bookings", protect, getUserBookings);
 
@@ -83,6 +92,7 @@ router.get("/my-bookings", protect, getUserBookings);
  *         description: Admin access required
  */
 router.get("/", protect, isAdmin, getAllBookings);
+router.get("/deals", protect, isAdmin, getDealsDropdown);
 
 /**
  * @swagger
@@ -117,5 +127,8 @@ router.get("/", protect, isAdmin, getAllBookings);
  *         description: Admin access required
  */
 router.put("/:id/status", protect, isAdmin, updateBookingStatus);
+router.put("/update/:id", protect, isAdmin, updateBooking);
+
+router.delete("/:id", protect, isAdmin, deleteBooking);
 
 module.exports = router;

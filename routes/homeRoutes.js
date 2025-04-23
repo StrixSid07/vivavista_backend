@@ -34,7 +34,7 @@ router.delete("/blogs/:id", protect, isAdmin, deleteBlog);
 router.get("/blogs/latest", getLatestBlogs);
 router.get("/homepage", getHomepageData);
 router.post("/subscribe-newsletter", subscribeNewsletter);
-router.get("/newsletter", getAllSubscribers);
+router.get("/newsletter", protect, isAdmin, getAllSubscribers);
 router.put("/newsletter/:id", protect, isAdmin, updateSubscriber);
 router.delete("/newsletter/:id", protect, isAdmin, deleteSubscriber);
 module.exports = router;

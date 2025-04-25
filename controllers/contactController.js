@@ -277,3 +277,79 @@ exports.sendSubscribeMessage = async (req, res) => {
     res.status(500).json({ message: "Failed to send welcome email." });
   }
 };
+
+//Controller method to dend booking info to client 
+exports.sendBookingConfirmation = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      destination,
+      bookingRef,
+      pax,
+      departureDate,
+      nights,
+      days,
+    } = req.body;
+
+    const supportEmail = "support@vivavista.com"; // replace with actual
+    const supportPhone = "+44 1234 567890"; // replace with actual
+
+    await transporter.sendMail({
+      from: `"Viva Vista Vacations" <${supportEmail}>`,
+      to: email,
+      subject: "Booking Confirmed – Get Ready for Your Holiday Adventure!",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #0056b3;">🎉 Booking Confirmation</h2>
+          <p>Hi ${name},</p>
+
+          <p>Thank you for booking your holiday with <strong>Viva Vista Vacations</strong>!<br />
+          We’re excited to confirm your booking and help you create unforgettable memories.</p>
+
+          <h3>✈ Booking Summary:</h3>
+          <ul>
+            <li><strong>Destination:</strong> ${destination}</li>
+            <li><strong>Booking Reference:</strong> ${bookingRef}</li>
+            <li><strong>Number of Travellers:</strong> ${pax}</li>
+            <li><strong>Departure Date:</strong> ${departureDate}</li>
+            <li><strong>Holiday Duration:</strong> ${nights} nights / ${days} days</li>
+          </ul>
+
+          <p>Your travel documents, including your invoice, ATOL certificate, and final itinerary,
+          will be sent to you within <strong>3 to 5 working days</strong>.</p>
+
+          <p>If you have any questions in the meantime or need assistance, feel free to contact our team at 
+          <a href="mailto:${supportEmail}">${supportEmail}</a> or call us on 
+          <a href="tel:${supportPhone}">${supportPhone}</a>. We’re here to ensure your journey is smooth from the start.</p>
+
+          <p>Thank you for choosing <strong>Viva Vista Vacations</strong> – where every holiday is tailor-made just for you.</p>
+
+          <p>Warm regards,<br/>
+          <strong>Team Viva Vista Vacations</strong></p>
+
+          <div style="margin-top: 1rem;">
+            <img
+              src="cid:vivavista-logo"
+              alt="Viva Vista Vacations Logo"
+              style="max-width: 150px; height: auto;"
+            />
+          </div>
+        </div>
+      `,
+      attachments: [
+        {
+          filename: "vivavista.png",
+          path: logoPath, // make sure this is correctly set on your server
+          cid: "vivavista-logo",
+        },
+      ],
+    });
+
+    res.status(200).json({ message: "Booking confirmation sent to customer." });
+  } catch (error) {
+    console.error("Error sending booking confirmation:", error);
+    res.status(500).json({ message: "Failed to send confirmation email." });
+  }
+};
+

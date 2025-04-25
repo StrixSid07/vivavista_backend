@@ -184,12 +184,14 @@ exports.getHomepageData = async (req, res) => {
   try {
     // Get featured deals (limit 6)
     const featuredDeals = await Deal.find({ isFeatured: true })
-      .select(
-        "title images boardBasis isHotdeal isTopDeal destination prices days tag"
-      )
+      .select("title images isHotdeal isTopDeal destination prices days tag")
       .populate({
         path: "destination",
         select: "name image", // Destination name & image only
+      })
+      .populate({
+        path: "boardBasis",
+        select: "name",
       })
       .populate({
         path: "prices.hotel", // Populating hotel in prices array
@@ -202,12 +204,15 @@ exports.getHomepageData = async (req, res) => {
       .select("name image isPopular")
       .populate({
         path: "deals",
-        select:
-          "title images boardBasis isHotdeal isTopDeal destination prices days tag",
+        select: "title images isHotdeal isTopDeal destination prices days tag",
         populate: [
           {
             path: "destination",
             select: "name image",
+          },
+          {
+            path: "boardBasis",
+            select: "name",
           },
           {
             path: "prices.hotel",

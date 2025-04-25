@@ -71,8 +71,8 @@ const DealSchema = new mongoose.Schema(
     hotels: [{ type: mongoose.Schema.Types.ObjectId, ref: "Hotel" }],
 
     boardBasis: {
-      type: String,
-      enum: ["Half Board", "Full Board", "All Inclusive"],
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BoardBasis",
       required: true,
     },
     tag: { type: String },
@@ -82,6 +82,7 @@ const DealSchema = new mongoose.Schema(
     itinerary: {
       type: [ItineraryItemSchema],
       default: [],
+      required: false,
     },
     isFeatured: { type: Boolean, default: false },
     distanceToCenter: { type: String }, // Example: "500m away"

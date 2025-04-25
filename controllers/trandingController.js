@@ -6,7 +6,7 @@ exports.getHotDeals = async (req, res) => {
     const deals = await Deal.find({ isHotDeal: true }).populate(
       "destination",
       "name"
-    );
+    ).populate("boardBasis", "name");
 
     deals.sort((a, b) => a.destination.name.localeCompare(b.destination.name));
 
@@ -23,6 +23,7 @@ exports.getTopDeals = async (req, res) => {
     const deals = await Deal.find({ isTopDeal: true })
       .populate("prices.hotel")
       .populate("destination", "name")
+      .populate("boardBasis", "name")
       .select(
         "title destination description prices boardBasis days images isTopDeal isHotdeal"
       );
@@ -84,6 +85,7 @@ exports.getTopDealsByDestination = async (req, res) => {
     const deals = await Deal.find(query)
       .limit(6)
       .populate("destination")
+      .populate("noardBasis")
       .populate("prices.hotel")
       .populate("hotels");
 

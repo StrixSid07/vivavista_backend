@@ -14,10 +14,9 @@ exports.getDestinations = async (req, res) => {
 
 exports.getDestinationDropdown = async (req, res) => {
   try {
-    const destinations = await Destination.find(
-      {},
-      "_id name"
-    ).sort({ name: 1 });
+    const destinations = await Destination.find({}, "_id name").sort({
+      name: 1,
+    });
     res.json(destinations);
   } catch (error) {
     res.status(500).json({ error: "Server error" });
@@ -162,10 +161,9 @@ exports.getFilterDealsByDestination = async (req, res) => {
     const deals = await Deal.find({
       destination: destination._id,
     })
-      .select(
-        "title destination images days prices boardBasis tag isTopDeal isHotdeal"
-      )
+      .select("title destination images days prices tag isTopDeal isHotdeal")
       .populate("holidaycategories", "name")
+      .populate("boardBasis", "name")
       .populate("prices.hotel", "tripAdvisorRating tripAdvisorReviews")
       .populate("destination", "name");
 

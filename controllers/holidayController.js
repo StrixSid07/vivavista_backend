@@ -113,8 +113,9 @@ exports.getFilterDealsByHoliday = async (req, res) => {
     const deals = await Deal.find({
       holidaycategories: holidayCategory._id,
     })
-      .select("title images days prices boardBasis tag isTopDeal isHotdeal")
+      .select("title images days prices tag isTopDeal isHotdeal")
       .populate("destination", "name")
+      .populate("boardBasis", "name")
       .populate("prices.hotel", "tripAdvisorRating tripAdvisorReviews");
 
     // Manually filter out unwanted fields from prices[]

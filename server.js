@@ -93,7 +93,8 @@ app.use("/api/faqs", require("./routes/faqsRoutes"));
 app.use("/api/terms", require("./routes/termsRoutes"));
 app.use("/api/carousel", require("./routes/carouselRoutes"));
 app.use("/api/holidays", require("./routes/holidayRoutes"));
-app.use("/api/contact", require("./routes/contactRoutes"));
+app.use("/api/boardbasis", require("./routes/boardbasisRoutes"));
+app.use("/api/mail", require("./routes/contactRoutes"));
 app.use("/api/newslatter", require("./routes/newslatterXLRoutes"));
 app.use("/admin/deals", require("./routes/adminDeals"));
 // ✅ Apply Caching to Deals API
@@ -143,5 +144,5 @@ if (isLocal) {
 }
 
 // ✅ Start Cron Job for Hotel Ratings Update
-const updateHotelRatings = require("./cron/hotelUpdater");
-updateHotelRatings();
+// const updateHotelRatings = require("./cron/hotelUpdater");
+// updateHotelRatings();

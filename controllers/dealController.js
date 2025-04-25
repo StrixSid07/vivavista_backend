@@ -2,7 +2,7 @@ const Deal = require("../models/Deal");
 const Hotel = require("../models/Hotel");
 const Destination = require("../models/Destination");
 const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
-const { uploadToS3,deleteFromS3 } = require("../middleware/imageUpload");
+const { uploadToS3, deleteFromS3 } = require("../middleware/imageUpload");
 
 // ✅ Create a New Deal with Image Upload
 const createDeal = async (req, res) => {
@@ -198,13 +198,14 @@ const getAllDeals = async (req, res) => {
     // ✅ Fetch Deals with Filters & Sorting
     let deals = await Deal.find(query)
       .populate("destination")
+      .populate("boardBasis", "name")
       .populate("hotels", "name tripAdvisorRating facilities location images")
       .populate({
         path: "prices.hotel",
         select: "name tripAdvisorRating tripAdvisorReviews",
       })
       .select(
-        "title tag LowDeposite availableCountries description rooms guests prices boardBasis distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
+        "title tag boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance
@@ -381,6 +382,7 @@ const getDealById = async (req, res) => {
   try {
     const deal = await Deal.findById(req.params.id)
       .populate("destination", "name isPopular")
+      .populate("boardBasis", "name")
       .populate("prices.hotel")
       .populate("hotels");
 
@@ -611,27 +613,24 @@ const updateDeal = async (req, res) => {
   }
 };
 
-
-const deleteDealImage= async(req,res)=>{
+const deleteDealImage = async (req, res) => {
   const { dealId } = req.params;
   const { imageUrl } = req.body;
-  try{
+  try {
     console.log(imageUrl);
-  await deleteFromS3(imageUrl);
+    await deleteFromS3(imageUrl);
 
-
-   // Remove image URL from MongoDB
-   await Deal.findByIdAndUpdate(dealId, {
-     $pull: { images: imageUrl },
-   });
-console.log("Image deleted successfully !  !");
-   res.status(200).json({ message: 'Image deleted successfully' });
-  }
-  catch(error){
+    // Remove image URL from MongoDB
+    await Deal.findByIdAndUpdate(dealId, {
+      $pull: { images: imageUrl },
+    });
+    console.log("Image deleted successfully !  !");
+    res.status(200).json({ message: "Image deleted successfully" });
+  } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
-}
+};
 // ✅ Delete a Deal (Admin Only)
 const deleteDeal = async (req, res) => {
   try {
@@ -715,5 +714,5 @@ module.exports = {
   getAllDealsAdmin,
   getDealsByDestination,
   searchDeals,
-  deleteDealImage
+  deleteDealImage,
 };

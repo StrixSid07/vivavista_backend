@@ -36,6 +36,7 @@ const corsOptions = {
     "https://vivavistaadmin.netlify.app",
     "https://www.vivavistavacations.co.uk",
     "https://api.vivavistavacations.co.uk",
+    "http://localhost:5175/",
   ],
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true, // Allow cookies/session
@@ -43,8 +44,8 @@ const corsOptions = {
 };
 
 const app = express();
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.use(cors());
+// app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(helmet());
 app.use(morgan("dev"));

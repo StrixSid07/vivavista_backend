@@ -384,16 +384,32 @@ const getDealById = async (req, res) => {
       .populate("destination", "name isPopular")
       .populate("boardBasis", "name")
       .populate("prices.hotel")
+      .populate("prices.airport")
       .populate("hotels");
 
     if (!deal) return res.status(404).json({ message: "Deal not found" });
 
-    // Get today's date and the date three days from now
     const today = new Date();
     const threeDaysFromNow = new Date();
     threeDaysFromNow.setDate(today.getDate() + 3);
 
-    // If the user is NOT an admin, apply country restriction
+    // ✨ Step 1: Expand prices if airport field is an array
+    const expandedPrices = [];
+    for (const price of deal.prices) {
+      if (Array.isArray(price.airport)) {
+        for (const airport of price.airport) {
+          expandedPrices.push({
+            ...price.toObject(), // important to clone the Mongoose document
+            airport: airport, // set single airport
+          });
+        }
+      } else {
+        expandedPrices.push(price.toObject ? price.toObject() : price);
+      }
+    }
+    deal.prices = expandedPrices; // replace deal.prices with expanded version
+
+    // ✨ Step 2: Now apply country restriction if user is NOT admin
     if (!req.user || req.user.role !== "admin") {
       const userCountry = req.session.country || "UK";
       if (!deal.availableCountries.includes(userCountry)) {
@@ -402,17 +418,14 @@ const getDealById = async (req, res) => {
         });
       }
 
-      // Filter prices for the selected country and with startdate more than 3 days from today
       const countryPrices = deal.prices.filter((p) => {
         const startDate = new Date(p.startdate);
         return p.country === userCountry && startDate > threeDaysFromNow;
       });
 
-      // Set prices to an empty array if no valid prices are found
       deal.prices = countryPrices.length > 0 ? countryPrices : [];
     }
 
-    // Return the deal with the filtered prices (which may be empty)
     res.json(deal);
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });

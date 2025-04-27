@@ -41,7 +41,8 @@ const DealSchema = new mongoose.Schema(
     prices: [
       {
         country: { type: String, required: true },
-        airport: { type: String, required: true }, // E.g., "LHR", "JFK"
+        // airport: { type: String, required: true },
+        airport:[{type:mongoose.Schema.Types.ObjectId, ref:"Airport"}],
         hotel: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Hotel",

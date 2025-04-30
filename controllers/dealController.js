@@ -1,4 +1,5 @@
 const Deal = require("../models/Deal");
+const mongoose = require("mongoose");
 const Hotel = require("../models/Hotel");
 const Destination = require("../models/Destination");
 const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
@@ -8,7 +9,6 @@ const { uploadToS3, deleteFromS3 } = require("../middleware/imageUpload");
 const createDeal = async (req, res) => {
   try {
     const parsedData = JSON.parse(req.body.data);
-
     const {
       title,
       description,
@@ -17,7 +17,7 @@ const createDeal = async (req, res) => {
       prices,
       hotels,
       holidaycategories,
-      itinerary,
+      itinerary = [],
       boardBasis,
       isTopDeal,
       isHotdeal,
@@ -32,61 +32,92 @@ const createDeal = async (req, res) => {
       guests,
       tag,
       LowDeposite,
-    } = parsedData; // Now you can access properties directly
-    console.log("this is req body", req.body.data);
-    console.log("this is country", availableCountries);
+      priceswitch,
+    } = parsedData;
+
+    // Basic validations
     if (!title || !description) {
       return res
         .status(400)
         .json({ message: "Title and description are required." });
     }
-    if (!Array.isArray(availableCountries) || availableCountries.length === 0) {
+    if (!Array.isArray(availableCountries) || !availableCountries.length) {
       return res
         .status(400)
         .json({ message: "At least one country must be selected." });
     }
-    if (!Array.isArray(hotels) || hotels.length === 0) {
+    if (!destination || !mongoose.Types.ObjectId.isValid(destination)) {
+      return res
+        .status(400)
+        .json({ message: "A valid destination must be selected." });
+    }
+    if (!boardBasis || !mongoose.Types.ObjectId.isValid(boardBasis)) {
+      return res
+        .status(400)
+        .json({ message: "A valid board basis must be selected." });
+    }
+    if (!Array.isArray(hotels) || !hotels.length) {
       return res
         .status(400)
         .json({ message: "At least one hotel must be added." });
     }
-    if (!Array.isArray(prices) || prices.length === 0) {
+    if (!Array.isArray(prices) || !prices.length) {
       return res
         .status(400)
         .json({ message: "At least one price entry is required." });
     }
-    // Extract image URLs from the request
-    let imageUrls = [];
-    // if (req.files && req.files.length > 0) {
-    //   imageUrls = req.files.map((file) =>
-    //     IMAGE_STORAGE === "s3" ? file.location : `/uploads/${file.filename}`
-    //   );
-    // }
-    if (req.files && req.files.length > 0) {
-      if (IMAGE_STORAGE === "s3") {
-        imageUrls = await Promise.all(
-          req.files.map((file) => uploadToS3(file))
-        );
-      } else {
-        imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+
+    // Validate itinerary items
+    const cleanItinerary = itinerary.filter(
+      (item) => item.title && item.description
+    );
+
+    // Validate price entries
+    for (const [index, priceObj] of prices.entries()) {
+      const { country, startdate, enddate, hotel, price } = priceObj;
+      if (!country) {
+        return res
+          .status(400)
+          .json({ message: `Price #${index + 1}: country is required.` });
+      }
+      if (!startdate || !enddate) {
+        return res.status(400).json({
+          message: `Price #${index + 1}: startdate and enddate are required.`,
+        });
+      }
+      if (!hotel || !mongoose.Types.ObjectId.isValid(hotel)) {
+        return res.status(400).json({
+          message: `Price #${index + 1}: a valid hotel ID is required.`,
+        });
+      }
+      if (!price) {
+        return res.status(400).json({
+          message: `Price #${index + 1}: price is required.`,
+        });
       }
     }
 
+    // Extract image URLs
+    let imageUrls = [];
+    if (req.files && req.files.length) {
+      if (process.env.IMAGE_STORAGE === "s3") {
+        imageUrls = await Promise.all(req.files.map((f) => uploadToS3(f)));
+      } else {
+        imageUrls = req.files.map((f) => `/uploads/${f.filename}`);
+      }
+    }
+
+    // Create deal
     const newDeal = new Deal({
       title,
       description,
       images: imageUrls,
       availableCountries,
-      prices,
-      boardBasis,
-      isTopDeal,
-      isHotdeal,
-      isFeatured,
       destination,
-      hotels,
       holidaycategories,
+      hotels,
+      boardBasis,
       rooms,
-      itinerary,
       guests,
       days,
       distanceToCenter,
@@ -96,25 +127,36 @@ const createDeal = async (req, res) => {
       termsAndConditions,
       tag,
       LowDeposite,
+      priceswitch,
+      itinerary: cleanItinerary,
+      prices,
+      isTopDeal,
+      isHotdeal,
+      isFeatured,
     });
 
     await newDeal.save();
 
-    if (destination) {
-      const updatedDestination = await Destination.findByIdAndUpdate(
-        destination,
-        { $addToSet: { deals: newDeal._id } },
-        { new: true }
-      );
-      console.log("Updated Destination:", updatedDestination);
-    }
+    // Link to destination
+    await Destination.findByIdAndUpdate(
+      destination,
+      { $addToSet: { deals: newDeal._id } },
+      { new: true }
+    );
 
-    res
+    return res
       .status(201)
       .json({ message: "Deal created successfully", deal: newDeal });
   } catch (error) {
-    console.log("error", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("CreateDeal Error:", error);
+    // Handle mongoose validation errors
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({ message: "Validation failed", errors });
+    }
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 
@@ -205,7 +247,7 @@ const getAllDeals = async (req, res) => {
         select: "name tripAdvisorRating tripAdvisorReviews",
       })
       .select(
-        "title tag boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
+        "title tag priceswitch boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance
@@ -252,7 +294,10 @@ const getAllDealsAdmin = async (req, res) => {
     const {
       country,
       airport,
+      fromdate,
+      todate,
       minPrice,
+      destination,
       maxPrice,
       boardBasis,
       rating,
@@ -266,64 +311,117 @@ const getAllDealsAdmin = async (req, res) => {
 
     let query = {};
 
-    // ✅ Filter by Country
+    // ✅ Filters
     if (country) query.availableCountries = country;
-
-    // ✅ Filter by Airport
+    if (destination) query["destination"] = destination;
     if (airport) query["prices.airport"] = airport;
 
-    // ✅ Filter by Price Range
+    if (fromdate && todate) {
+      query["prices"] = {
+        $elemMatch: {
+          startdate: { $gte: new Date(fromdate), $lte: new Date(todate) },
+        },
+      };
+    }
+
     if (minPrice || maxPrice) {
       query["prices.price"] = {};
       if (minPrice) query["prices.price"].$gte = Number(minPrice);
       if (maxPrice) query["prices.price"].$lte = Number(maxPrice);
     }
 
-    // ✅ Filter by Board Basis
     if (boardBasis) query.boardBasis = boardBasis;
-
-    // ✅ Filter by Rating
     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
-
-    // ✅ Filter by Holiday Type
-    if (holidayType) {
+    if (holidayType)
       query["hotels.facilities"] = { $in: holidayType.split(",") };
-    }
-
-    // ✅ Filter by Facilities
-    if (facilities) {
+    if (facilities)
       query["hotels.facilities"] = { $all: facilities.split(",") };
-    }
-
-    // ✅ Search by Hotel Name
-    if (search) {
-      query["hotels.name"] = { $regex: search, $options: "i" };
-    }
-
-    // ✅ Filter by Rooms & Guests
+    if (search) query["hotels.name"] = { $regex: search, $options: "i" };
     if (rooms) query.rooms = Number(rooms);
     if (guests) query.guests = Number(guests);
 
-    // ✅ Apply Sorting
-    let sortOption = {};
-    if (sort === "lowest-price") sortOption["prices.price"] = 1;
-    if (sort === "highest-price") sortOption["prices.price"] = -1;
-    if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
+    // ✅ Check if any filters were passed
+    const hasFilters =
+      country ||
+      airport ||
+      fromdate ||
+      todate ||
+      minPrice ||
+      maxPrice ||
+      destination ||
+      boardBasis ||
+      rating ||
+      holidayType ||
+      facilities ||
+      rooms ||
+      guests ||
+      search;
 
-    // ✅ Fetch Deals with Filters & Sorting
+    // ✅ Default condition: show all deals, even if prices missing or empty
+    if (!hasFilters) {
+      query.$or = [
+        { prices: { $exists: false } },
+        { prices: { $size: 0 } },
+        { "prices.0": { $exists: true } }, // at least one price
+      ];
+    }
+
+    // ✅ Sorting logic
+    let sortOption = { updatedAt: -1 };
+    if (sort === "lowest-price") sortOption = { "prices.price": 1 };
+    else if (sort === "highest-price") sortOption = { "prices.price": -1 };
+    else if (sort === "best-rating")
+      sortOption = { "hotels.tripAdvisorRating": -1 };
+
+    // ✅ Fetch Deals
     let deals = await Deal.find(query)
-      .populate("destination") // Populate destination details
-      .populate("hotels", "name tripAdvisorRating facilities location images") // Populate hotel details
-      .select("title prices boardBasis distanceToCenter distanceToBeach images") // Select relevant fields
+      .populate("destination")
+      .populate("boardBasis", "name")
+      .populate("hotels", "name tripAdvisorRating facilities location images")
+      .populate({
+        path: "prices.hotel",
+        select: "name tripAdvisorRating tripAdvisorReviews",
+      })
+      .select(
+        "title tag priceswitch boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
+      )
       .sort(sortOption)
-      .limit(50) // Limit to 50 results for performance
+      .limit(50)
       .lean();
 
-    console.log("🚀 ~ getAllDealsAdmin ~ deals:", deals);
+    // ✅ Filter airport-specific prices if needed
+    if (airport) {
+      deals = deals
+        .map((deal) => {
+          const relevantPrices = deal.prices.filter((p) => {
+            return (
+              p.airport &&
+              Array.isArray(p.airport) &&
+              p.airport.includes(airport)
+            );
+          });
+          return relevantPrices.length > 0
+            ? { ...deal, prices: relevantPrices }
+            : null;
+        })
+        .filter(Boolean);
+    }
+
+    // ✅ Sort prices within each deal
+    deals = deals.map((deal) => {
+      if (Array.isArray(deal.prices)) {
+        if (sort === "highest-price") {
+          deal.prices.sort((a, b) => b.price - a.price);
+        } else {
+          deal.prices.sort((a, b) => a.price - b.price);
+        }
+      }
+      return deal;
+    });
 
     res.json(deals);
   } catch (error) {
-    console.error("Error fetching deals for admin:", error);
+    console.error("error", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -541,7 +639,7 @@ const updateDeal = async (req, res) => {
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
     }
-
+    const parsedData = JSON.parse(req.body.data);
     // Validate availableCountries if provided
     if (
       req.body.availableCountries &&
@@ -551,6 +649,26 @@ const updateDeal = async (req, res) => {
       return res
         .status(400)
         .json({ message: "At least one country must be selected." });
+    }
+
+    // Validate destination if provided
+    if (
+      parsedData.destination &&
+      !mongoose.Types.ObjectId.isValid(parsedData.destination)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "A valid destination must be selected." });
+    }
+
+    // Validate boardBasis if provided
+    if (
+      parsedData.boardBasis &&
+      !mongoose.Types.ObjectId.isValid(parsedData.boardBasis)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "A valid board basis must be selected." });
     }
 
     // Extract image URLs from the request
@@ -565,26 +683,18 @@ const updateDeal = async (req, res) => {
       }
     }
 
-    const parsedData = JSON.parse(req.body.data);
-
     // Validate itinerary if provided
-    if (parsedData.itinerary) {
-      if (!Array.isArray(parsedData.itinerary)) {
-        return res.status(400).json({ message: "Itinerary must be an array." });
-      }
-      for (let i = 0; i < parsedData.itinerary.length; i++) {
-        const item = parsedData.itinerary[i];
-        if (typeof item !== "object" || !item.title || !item.description) {
-          return res.status(400).json({
-            message: `Itinerary item at index ${i} must have both title and description.`,
-          });
-        }
-      }
+    let cleanedItinerary = [];
+    if (parsedData.itinerary && Array.isArray(parsedData.itinerary)) {
+      cleanedItinerary = parsedData.itinerary.filter((item) => {
+        // keep only items where both title & description are non-empty strings
+        return item.title?.trim() && item.description?.trim();
+      });
     }
-
     // Prepare the updated data
     const updatedData = {
       ...parsedData,
+      itinerary: cleanedItinerary,
       images:
         imageUrls.length > 0 ? [...deal.images, ...imageUrls] : deal.images, // Keep existing images if no new images
     };

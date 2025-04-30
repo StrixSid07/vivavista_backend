@@ -40,9 +40,9 @@ const DealSchema = new mongoose.Schema(
     // Airport-based pricing & flight details
     prices: [
       {
+        priceswitch: { type: Boolean, default: false },
         country: { type: String, required: true },
-        // airport: { type: String, required: true },
-        airport:[{type:mongoose.Schema.Types.ObjectId, ref:"Airport"}],
+        airport: [{ type: mongoose.Schema.Types.ObjectId, ref: "Airport" }],
         hotel: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Hotel",

@@ -17,23 +17,23 @@ exports.getHotDeals = async (req, res) => {
   }
 };
 
-exports.getTopDeals = async (req, res) => {
-  try {
-    const deals = await Deal.find({ isTopDeal: true })
-      .populate("prices.hotel")
-      .populate("destination", "name")
-      .populate("boardBasis", "name")
-      .select(
-        "title destination description prices boardBasis days images isTopDeal isHotdeal"
-      );
+// exports.getTopDeals = async (req, res) => {
+//   try {
+//     const deals = await Deal.find({ isTopDeal: true })
+//       .populate("prices.hotel")
+//       .populate("destination", "name")
+//       .populate("boardBasis", "name")
+//       .select(
+//         "title destination description prices boardBasis days images isTopDeal isHotdeal"
+//       );
 
-    res.json(deals);
-  } catch {
-    res
-      .status(500)
-      .json({ message: "Error fetching Top deals by destination", error });
-  }
-};
+//     res.json(deals);
+//   } catch {
+//     res
+//       .status(500)
+//       .json({ message: "Error fetching Top deals by destination", error });
+//   }
+// };
 
 // exports.getTopDealsByDestination = async (req, res) => {
 //   try {
@@ -70,6 +70,43 @@ exports.getTopDeals = async (req, res) => {
 //     });
 //   }
 // };
+
+exports.getTopDeals = async (req, res) => {
+  try {
+    // Fetch Top Deals
+    const topDeals = await Deal.find({ isTopDeal: true })
+      .populate("prices.hotel")
+      .populate("destination", "name")
+      .populate("boardBasis", "name")
+      .select(
+        "title destination description prices boardBasis days images isTopDeal isHotdeal"
+      );
+
+    // Fetch Hot Deals (excluding already-included Top Deals by _id)
+    const topDealIds = topDeals.map((deal) => deal._id.toString());
+
+    const hotDeals = await Deal.find({
+      isHotdeal: true,
+      _id: { $nin: topDealIds }, // prevent duplicates
+    })
+      .populate("prices.hotel")
+      .populate("destination", "name")
+      .populate("boardBasis", "name")
+      .select(
+        "title destination description prices boardBasis days images isTopDeal isHotdeal"
+      );
+
+    // Combine: Top Deals first, then Hot Deals
+    const combinedDeals = [...topDeals, ...hotDeals];
+
+    res.json(combinedDeals);
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching Top and Hot deals",
+      error: error.message,
+    });
+  }
+};
 
 exports.getTopDealsByDestination = async (req, res) => {
   try {

@@ -3,15 +3,23 @@ const Term = require("../models/Terms"); // Adjust the path as necessary
 // Create a new term
 exports.createTerm = async (req, res) => {
   try {
-    const { mainTitle, data } = req.body;
+    const { title, content } = req.body;
+    const sequenceNumber = Number(req.body.sequenceNumber); // Convert to number
 
-    // Basic structure validation
-    if (!mainTitle || !Array.isArray(data)) {
-      return res.status(400).json({ message: "Invalid data structure" });
+    if (!title || !content || isNaN(sequenceNumber)) {
+      return res.status(400).json({ message: "Invalid or missing fields" });
     }
 
-    const newTerm = new Term(req.body);
+    const existingTerm = await Term.findOne({ sequenceNumber });
+    if (existingTerm) {
+      return res
+        .status(400)
+        .json({ message: "Sequence number already exists" });
+    }
+
+    const newTerm = new Term({ title, content, sequenceNumber });
     await newTerm.save();
+
     res
       .status(201)
       .json({ message: "Term created successfully", term: newTerm });
@@ -29,6 +37,19 @@ exports.bulkCreateTerms = async (req, res) => {
       return res.status(400).json({ message: "Invalid data structure" });
     }
 
+    // Validate each entry
+    for (const term of req.body) {
+      if (
+        !term.title ||
+        !term.content ||
+        typeof term.sequenceNumber !== "number"
+      ) {
+        return res
+          .status(400)
+          .json({ message: "Invalid term format in array" });
+      }
+    }
+
     const terms = await Term.insertMany(req.body);
     res.status(201).json({ message: "Terms created successfully", terms });
   } catch (error) {
@@ -41,7 +62,7 @@ exports.bulkCreateTerms = async (req, res) => {
 // Get all terms
 exports.getAllTerms = async (req, res) => {
   try {
-    const terms = await Term.find();
+    const terms = await Term.find().sort({ sequenceNumber: 1 });
     res.status(200).json(terms);
   } catch (error) {
     res
@@ -68,18 +89,35 @@ exports.getTermById = async (req, res) => {
 // Update a term by ID
 exports.updateTerm = async (req, res) => {
   try {
-    const term = await Term.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
+    const { title, content, sequenceNumber } = req.body;
+
+    const existingTerm = await Term.findOne({
+      sequenceNumber,
+      _id: { $ne: req.params.id },
     });
-    if (!term) {
+    if (existingTerm) {
+      return res
+        .status(400)
+        .json({ message: "Sequence number already exists" });
+    }
+
+    const updatedTerm = await Term.findByIdAndUpdate(
+      req.params.id,
+      { title, content, sequenceNumber },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedTerm) {
       return res.status(404).json({ message: "Term not found" });
     }
-    res.status(200).json({ message: "Term updated successfully", term });
+
+    res
+      .status(200)
+      .json({ message: "Term updated successfully", term: updatedTerm });
   } catch (error) {
     res
       .status(400)
-      .json({ message: "Error updating term", error: error.message });
+      .json({ message: "Error updating the term", error: error.message });
   }
 };
 

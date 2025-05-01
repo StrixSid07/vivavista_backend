@@ -97,7 +97,7 @@ app.use("/api/holidays", require("./routes/holidayRoutes"));
 app.use("/api/boardbasis", require("./routes/boardbasisRoutes"));
 app.use("/api/mail", require("./routes/contactRoutes"));
 app.use("/api/newslatter", require("./routes/newslatterXLRoutes"));
-app.use("/admin/deals", require("./routes/adminDeals"));
+app.use("/api/admindealsexternal", require("./routes/adminDeals"));
 // ✅ Apply Caching to Deals API
 // const cacheMiddleware = async (req, res, next) => {
 //   const key = req.originalUrl;

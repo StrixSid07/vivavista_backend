@@ -187,7 +187,16 @@ const getAllDeals = async (req, res) => {
     if (country) query.availableCountries = country;
     if (destination) query["destination"] = destination;
     // ✅ Filter by Airport
-    if (airport) query["prices.airport"] = airport;
+    if (airport) {
+      const airportArray = Array.isArray(airport) ? airport : [airport];
+      query["prices"] = {
+        $elemMatch: {
+          airport: {
+            $in: airportArray.map((id) => new mongoose.Types.ObjectId(id)),
+          },
+        },
+      };
+    }
     // ✅ Filter by Date Range
     if (fromdate && todate) {
       query["prices"] = {
@@ -252,23 +261,38 @@ const getAllDeals = async (req, res) => {
       .sort(sortOption)
       .limit(50) // Limit to 50 results for performance
       .lean();
-
+    if (!deals.length) {
+      deals = await Deal.find({})
+        .populate("destination")
+        .populate("boardBasis", "name")
+        .populate("hotels", "name tripAdvisorRating facilities location images")
+        .populate({
+          path: "prices.hotel",
+          select: "name tripAdvisorRating tripAdvisorReviews",
+        })
+        .select(
+          "title tag priceswitch boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
+        )
+        .sort(sortOption)
+        .limit(50)
+        .lean();
+    }
     console.log("🚀 ~ getAllDeals ~ deals:", deals);
     // ✅ Filter flight details based on the selected airport
-    deals = deals
-      .map((deal) => {
-        const relevantPrices = deal.prices.filter((p) => {
-          const matchAirport = !airport || p.airport === airport;
-          // const matchDate = (!fromdate || new Date(p.date) >= new Date(fromdate)) &&
-          //                   (!enddate || new Date(p.date) <= new Date(enddate));
-          return matchAirport;
-        });
+    // deals = deals
+    //   .map((deal) => {
+    //     const relevantPrices = deal.prices.filter((p) => {
+    //       const matchAirport = !airport || p.airport === airport;
+    //       // const matchDate = (!fromdate || new Date(p.date) >= new Date(fromdate)) &&
+    //       //                   (!enddate || new Date(p.date) <= new Date(enddate));
+    //       return matchAirport;
+    //     });
 
-        return relevantPrices.length > 0
-          ? { ...deal, prices: relevantPrices }
-          : null;
-      })
-      .filter(Boolean);
+    //     return relevantPrices.length > 0
+    //       ? { ...deal, prices: relevantPrices }
+    //       : null;
+    //   })
+    //   .filter(Boolean);
 
     // ✅ Sort prices inside each deal
     deals = deals.map((deal) => {

@@ -7,18 +7,18 @@ const { protect, isAdmin } = require("../middleware/authMiddleware");
 router.post(
   "/",
   upload.array("images", 5),
-  isAdmin,
   protect,
+  isAdmin,
   carouselController.createCarousel
 );
 router.get("/", carouselController.getAllCarousels);
 router.put(
   "/:id",
   upload.array("images", 5),
-  isAdmin,
   protect,
+  isAdmin,
   carouselController.updateCarousel
 );
-router.delete("/:id", isAdmin, protect, carouselController.deleteCarousel);
+router.delete("/:id", protect, isAdmin, carouselController.deleteCarousel);
 
 module.exports = router;

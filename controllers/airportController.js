@@ -81,8 +81,7 @@ exports.updateAirport = async (req, res) => {
 
 exports.deleteAirport = async (req, res) => {
   try {
-    const Code = req.params.code.toUpperCase();
-    const airport = await Airport.findOneAndDelete({ code: Code });
+    const airport = await Airport.findByIdAndDelete(req.params.id);
     if (!airport) return res.status(404).json({ message: "Airport Not Found" });
     res.json({ message: "Airport Deleted" });
   } catch (err) {

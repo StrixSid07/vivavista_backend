@@ -185,7 +185,10 @@ const getAllDeals = async (req, res) => {
 
     // ✅ Filter by Country
     if (country) query.availableCountries = country;
+
+    // ✅ Filter by Destination
     if (destination) query["destination"] = destination;
+
     // ✅ Filter by Airport
     if (airport) {
       const airportArray = Array.isArray(airport) ? airport : [airport];
@@ -197,6 +200,7 @@ const getAllDeals = async (req, res) => {
         },
       };
     }
+
     // ✅ Filter by Date Range
     if (fromdate && todate) {
       query["prices"] = {
@@ -205,6 +209,7 @@ const getAllDeals = async (req, res) => {
         },
       };
     }
+
     // ✅ Filter by Price Range
     if (minPrice || maxPrice) {
       query["prices.price"] = {};
@@ -212,17 +217,30 @@ const getAllDeals = async (req, res) => {
       if (maxPrice) query["prices.price"].$lte = Number(maxPrice);
     }
 
-    // ✅ Filter by Board Basis
-    if (boardBasis) query.boardBasis = boardBasis;
+    // ✅ Filter by Board Basis (multi-select)
+    let boardBasisFilterApplied = false;
+    if (boardBasis) {
+      const boardArray = boardBasis.split(",");
+      if (boardArray.length > 0) {
+        query.boardBasis = { $in: boardArray };
+        boardBasisFilterApplied = true;
+      }
+    }
+
+    // ✅ Filter by Holiday Categories (multi-select)
+    let holidayFilterApplied = false;
+    if (holidayType) {
+      const holidayArray = holidayType.split(",");
+      if (holidayArray.length > 0) {
+        query.holidaycategories = { $in: holidayArray };
+        holidayFilterApplied = true;
+      }
+    }
 
     // ✅ Filter by Rating
     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
 
-    // ✅ Filter by Holiday Type
-    if (holidayType)
-      query["hotels.facilities"] = { $in: holidayType.split(",") };
-
-    // ✅ Filter by Facilities
+    // ✅ Filter by Holiday Type as facilities
     if (facilities)
       query["hotels.facilities"] = { $all: facilities.split(",") };
 
@@ -234,19 +252,12 @@ const getAllDeals = async (req, res) => {
     if (guests) query.guests = Number(guests);
 
     // ✅ Apply Sorting
-    // let sortOption = {};
-    // if (sort === "lowest-price") sortOption["prices.price"] = 1;
-    // if (sort === "highest-price") sortOption["prices.price"] = -1;
-    // if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
     let sortOption = { "prices.price": 1 };
-
-    if (sort === "highest-price") {
-      sortOption = { "prices.price": -1 };
-    } else if (sort === "best-rating") {
+    if (sort === "highest-price") sortOption = { "prices.price": -1 };
+    else if (sort === "best-rating")
       sortOption = { "hotels.tripAdvisorRating": -1 };
-    }
 
-    // ✅ Fetch Deals with Filters & Sorting
+    // ✅ Fetch Filtered Deals
     let deals = await Deal.find(query)
       .populate("destination")
       .populate("boardBasis", "name")
@@ -259,10 +270,16 @@ const getAllDeals = async (req, res) => {
         "title tag priceswitch boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
-      .limit(50) // Limit to 50 results for performance
+      .limit(50)
       .lean();
-    if (!deals.length) {
-      deals = await Deal.find({})
+
+    // ✅ If no deals match, fallback by removing boardBasis and holiday filters only
+    if (!deals.length && (boardBasisFilterApplied || holidayFilterApplied)) {
+      const fallbackQuery = { ...query };
+      if (boardBasisFilterApplied) delete fallbackQuery.boardBasis;
+      if (holidayFilterApplied) delete fallbackQuery.holidaycategories;
+
+      deals = await Deal.find(fallbackQuery)
         .populate("destination")
         .populate("boardBasis", "name")
         .populate("hotels", "name tripAdvisorRating facilities location images")
@@ -277,22 +294,6 @@ const getAllDeals = async (req, res) => {
         .limit(50)
         .lean();
     }
-    console.log("🚀 ~ getAllDeals ~ deals:", deals);
-    // ✅ Filter flight details based on the selected airport
-    // deals = deals
-    //   .map((deal) => {
-    //     const relevantPrices = deal.prices.filter((p) => {
-    //       const matchAirport = !airport || p.airport === airport;
-    //       // const matchDate = (!fromdate || new Date(p.date) >= new Date(fromdate)) &&
-    //       //                   (!enddate || new Date(p.date) <= new Date(enddate));
-    //       return matchAirport;
-    //     });
-
-    //     return relevantPrices.length > 0
-    //       ? { ...deal, prices: relevantPrices }
-    //       : null;
-    //   })
-    //   .filter(Boolean);
 
     // ✅ Sort prices inside each deal
     deals = deals.map((deal) => {
@@ -304,7 +305,6 @@ const getAllDeals = async (req, res) => {
       return deal;
     });
 
-    console.log("🚀 ~ getAllDeals ~ deals:", deals);
     res.json(deals);
   } catch (error) {
     console.log("error", error);

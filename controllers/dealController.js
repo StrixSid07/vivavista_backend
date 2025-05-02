@@ -1,5 +1,6 @@
 const Deal = require("../models/Deal");
 const mongoose = require("mongoose");
+const Airport = require("../models/Airport");
 const Hotel = require("../models/Hotel");
 const Destination = require("../models/Destination");
 const IMAGE_STORAGE = process.env.IMAGE_STORAGE || "local";
@@ -185,21 +186,28 @@ const getAllDeals = async (req, res) => {
 
     // ✅ Filter by Country
     if (country) query.availableCountries = country;
-
-    // ✅ Filter by Destination
     if (destination) query["destination"] = destination;
-
     // ✅ Filter by Airport
-    if (airport) {
-      const airportArray = Array.isArray(airport) ? airport : [airport];
-      query["prices"] = {
-        $elemMatch: {
-          airport: {
-            $in: airportArray.map((id) => new mongoose.Types.ObjectId(id)),
-          },
-        },
-      };
-    }
+if (airport) {
+  const airportArray = Array.isArray(airport) ? airport : [airport];
+
+  // Step 1: Find matching airports by code
+  const airportDocs = await Airport.find({
+    code: { $in: airportArray },
+  }).select("_id");
+
+  // Step 2: Extract the _id values
+  const airportIds = airportDocs.map((doc) => doc._id);
+
+  // Step 3: Apply filter
+  query["prices"] = {
+    $elemMatch: {
+      airport: {
+        $in: airportIds,
+      },
+    },
+  };
+}
 
     // ✅ Filter by Date Range
     if (fromdate && todate) {
@@ -209,7 +217,6 @@ const getAllDeals = async (req, res) => {
         },
       };
     }
-
     // ✅ Filter by Price Range
     if (minPrice || maxPrice) {
       query["prices.price"] = {};
@@ -217,30 +224,17 @@ const getAllDeals = async (req, res) => {
       if (maxPrice) query["prices.price"].$lte = Number(maxPrice);
     }
 
-    // ✅ Filter by Board Basis (multi-select)
-    let boardBasisFilterApplied = false;
-    if (boardBasis) {
-      const boardArray = boardBasis.split(",");
-      if (boardArray.length > 0) {
-        query.boardBasis = { $in: boardArray };
-        boardBasisFilterApplied = true;
-      }
-    }
-
-    // ✅ Filter by Holiday Categories (multi-select)
-    let holidayFilterApplied = false;
-    if (holidayType) {
-      const holidayArray = holidayType.split(",");
-      if (holidayArray.length > 0) {
-        query.holidaycategories = { $in: holidayArray };
-        holidayFilterApplied = true;
-      }
-    }
+    // ✅ Filter by Board Basis
+    if (boardBasis) query.boardBasis = boardBasis;
 
     // ✅ Filter by Rating
     if (rating) query["hotels.tripAdvisorRating"] = { $gte: Number(rating) };
 
-    // ✅ Filter by Holiday Type as facilities
+    // ✅ Filter by Holiday Type
+    if (holidayType)
+      query["hotels.facilities"] = { $in: holidayType.split(",") };
+
+    // ✅ Filter by Facilities
     if (facilities)
       query["hotels.facilities"] = { $all: facilities.split(",") };
 
@@ -252,12 +246,19 @@ const getAllDeals = async (req, res) => {
     if (guests) query.guests = Number(guests);
 
     // ✅ Apply Sorting
+    // let sortOption = {};
+    // if (sort === "lowest-price") sortOption["prices.price"] = 1;
+    // if (sort === "highest-price") sortOption["prices.price"] = -1;
+    // if (sort === "best-rating") sortOption["hotels.tripAdvisorRating"] = -1;
     let sortOption = { "prices.price": 1 };
-    if (sort === "highest-price") sortOption = { "prices.price": -1 };
-    else if (sort === "best-rating")
-      sortOption = { "hotels.tripAdvisorRating": -1 };
 
-    // ✅ Fetch Filtered Deals
+    if (sort === "highest-price") {
+      sortOption = { "prices.price": -1 };
+    } else if (sort === "best-rating") {
+      sortOption = { "hotels.tripAdvisorRating": -1 };
+    }
+
+    // ✅ Fetch Deals with Filters & Sorting
     let deals = await Deal.find(query)
       .populate("destination")
       .populate("boardBasis", "name")
@@ -270,30 +271,40 @@ const getAllDeals = async (req, res) => {
         "title tag priceswitch boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
       )
       .sort(sortOption)
-      .limit(50)
+      .limit(50) // Limit to 50 results for performance
       .lean();
+   if (!deals.length) {
+     deals = await Deal.find({})
+       .populate("destination")
+       .populate("boardBasis", "name")
+       .populate("hotels", "name tripAdvisorRating facilities location images")
+       .populate({
+         path: "prices.hotel",
+         select: "name tripAdvisorRating tripAdvisorReviews",
+       })
+       .select(
+         "title tag priceswitch boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
+       )
+       .sort(sortOption)
+       .limit(50)
+       .lean();
+   }
+    console.log("🚀 ~ getAllDeals ~ deals:", deals);
+    // ✅ Filter flight details based on the selected airport
+    // deals = deals
+    //   .map((deal) => {
+    //     const relevantPrices = deal.prices.filter((p) => {
+    //       const matchAirport = !airport || p.airport === airport;
+    //       // const matchDate = (!fromdate || new Date(p.date) >= new Date(fromdate)) &&
+    //       //                   (!enddate || new Date(p.date) <= new Date(enddate));
+    //       return matchAirport;
+    //     });
 
-    // ✅ If no deals match, fallback by removing boardBasis and holiday filters only
-    if (!deals.length && (boardBasisFilterApplied || holidayFilterApplied)) {
-      const fallbackQuery = { ...query };
-      if (boardBasisFilterApplied) delete fallbackQuery.boardBasis;
-      if (holidayFilterApplied) delete fallbackQuery.holidaycategories;
-
-      deals = await Deal.find(fallbackQuery)
-        .populate("destination")
-        .populate("boardBasis", "name")
-        .populate("hotels", "name tripAdvisorRating facilities location images")
-        .populate({
-          path: "prices.hotel",
-          select: "name tripAdvisorRating tripAdvisorReviews",
-        })
-        .select(
-          "title tag priceswitch boardBasis LowDeposite availableCountries description rooms guests prices distanceToCenter distanceToBeach days images isTopDeal isHotdeal isFeatured holidaycategories itinerary whatsIncluded exclusiveAdditions termsAndConditions"
-        )
-        .sort(sortOption)
-        .limit(50)
-        .lean();
-    }
+    //     return relevantPrices.length > 0
+    //       ? { ...deal, prices: relevantPrices }
+    //       : null;
+    //   })
+    //   .filter(Boolean);
 
     // ✅ Sort prices inside each deal
     deals = deals.map((deal) => {
@@ -305,13 +316,13 @@ const getAllDeals = async (req, res) => {
       return deal;
     });
 
+    console.log("🚀 ~ getAllDeals ~ deals:", deals);
     res.json(deals);
   } catch (error) {
     console.log("error", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 // ✅ Get All Deals for Admin
 const getAllDealsAdmin = async (req, res) => {
   try {

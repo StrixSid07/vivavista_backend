@@ -83,6 +83,7 @@ const Deal = require("../models/Deal");
 //   }
 // };
 
+
 const createBooking = async (req, res) => {
   try {
     const {
@@ -110,7 +111,7 @@ const createBooking = async (req, res) => {
     const airportCode = airport.toUpperCase();
 
     // Find deal and populate 'prices.hotel'
-    const deal = await Deal.findById(dealId).populate("prices.hotel");
+    const deal = await Deal.findById(dealId).populate("prices.hotel").populate("prices.airport");
     if (!deal) {
       return res.status(404).json({ message: "Deal not found" });
     }
@@ -119,13 +120,16 @@ const createBooking = async (req, res) => {
     const matchedPrice = deal.prices.find((price) => {
       const start = new Date(price.startdate).toISOString().split("T")[0];
       const end = new Date(price.enddate).toISOString().split("T")[0];
-      const priceAirport = price.airport.toUpperCase();
+      console.log("this is price ",price);
+      const hasMatchingAirport = Array.isArray(price.airport)
+  ? price.airport.some((a) => a.code?.toUpperCase() === airportCode)
+  : price.airport?.code?.toUpperCase() === airportCode;
 
-      return (
-        priceAirport === airportCode &&
-        selectedDateOnly >= start &&
-        selectedDateOnly <= end
-      );
+return (
+  hasMatchingAirport &&
+  selectedDateOnly >= start &&
+  selectedDateOnly <= end
+);
     });
 
     if (!matchedPrice) {
